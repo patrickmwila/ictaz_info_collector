@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-center">Member Information Form</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="memberForm" onsubmit="return confirmSubmit('memberForm');">
+                    {{ form.csrf_token }}
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="FirstName" class="form-label">First Name:</label>
+                            {{ form.FirstName(class="form-control") }}
+                            {% if form.FirstName.errors %}
+                                <script>
+                                    showAlert('Error', '{{ form.FirstName.errors[0] }}', 'error');
+                                </script>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="MiddleName" class="form-label">Middle Name:</label>
+                            {{ form.MiddleName(class="form-control") }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="LastName" class="form-label">Last Name:</label>
+                            {{ form.LastName(class="form-control") }}
+                            {% if form.LastName.errors %}
+                                <script>
+                                    showAlert('Error', '{{ form.LastName.errors[0] }}', 'error');
+                                </script>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="Gender" class="form-label">Gender:</label>
+                            {{ form.Gender(class="form-select") }}
+                            {% if form.Gender.errors %}
+                                <script>
+                                    showAlert('Error', '{{ form.Gender.errors[0] }}', 'error');
+                                </script>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="Email" class="form-label">Email:</label>
+                            {{ form.Email(class="form-control") }}
+                            {% if form.Email.errors %}
+                                <script>
+                                    showAlert('Error', '{{ form.Email.errors[0] }}', 'error');
+                                </script>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="DateofBirth" class="form-label">Date of Birth (DD/MM/YYYY):</label>
+                            {{ form.DateofBirth(class="form-control") }}
+                            {% if form.DateofBirth.errors %}
+                                <script>
+                                    showAlert('Error', '{{ form.DateofBirth.errors[0] }}', 'error');
+                                </script>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="MobileNo" class="form-label">Mobile Number (start with 260):</label>
+                            {{ form.MobileNo(class="form-control") }}
+                            {% if form.MobileNo.errors %}
+                                <script>
+                                    showAlert('Error', '{{ form.MobileNo.errors[0] }}', 'error');
+                                </script>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="IDNumber" class="form-label">ID Number:</label>
+                            {{ form.IDNumber(class="form-control", readonly=true) }}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="IDType" class="form-label">ID Type:</label>
+                            {{ form.IDType(class="form-select") }}
+                            {% if form.IDType.errors %}
+                                <script>
+                                    showAlert('Error', '{{ form.IDType.errors[0] }}', 'error');
+                                </script>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="Nationality" class="form-label">Nationality:</label>
+                            {{ form.Nationality(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="MembershipCategory" class="form-label">Membership Category:</label>
+                        {{ form.MembershipCategory(class="form-select") }}
+                        {% if form.MembershipCategory.errors %}
+                            <script>
+                                showAlert('Error', '{{ form.MembershipCategory.errors[0] }}', 'error');
+                            </script>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

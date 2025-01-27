@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2 class="text-center">Member Details</h2>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>First Name:</th>
+                            <td>{{ member.FirstName }}</td>
+                            <th>Middle Name:</th>
+                            <td>{{ member.MiddleName }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Name:</th>
+                            <td>{{ member.LastName }}</td>
+                            <th>Gender:</th>
+                            <td>{{ member.Gender }}</td>
+                        </tr>
+                        <tr>
+                            <th>Email:</th>
+                            <td>{{ member.Email }}</td>
+                            <th>Date of Birth:</th>
+                            <td>{{ member.DateofBirth }}</td>
+                        </tr>
+                        <tr>
+                            <th>Mobile Number:</th>
+                            <td>{{ member.MobileNo }}</td>
+                            <th>ID Number:</th>
+                            <td>{{ member.IDNumber }}</td>
+                        </tr>
+                        <tr>
+                            <th>ID Type:</th>
+                            <td>{{ member.IDType }}</td>
+                            <th>Nationality:</th>
+                            <td>{{ member.Nationality }}</td>
+                        </tr>
+                        <tr>
+                            <th>Membership Category:</th>
+                            <td colspan="3">{{ member.MembershipCategory }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
