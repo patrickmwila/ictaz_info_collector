@@ -46,6 +46,7 @@
                     <th>Email</th>
                     <th>Mobile</th>
                     <th>Membership Category</th>
+                    <th>ID Document</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -72,6 +73,15 @@
                     <td>{{ member.MobileNo or 'Not provided' }}</td>
                     <td>{{ member.MembershipCategory or 'Not provided' }}</td>
                     <td class="text-center">
+                        {% if member.IDDocument %}
+                            <a href="{{ url_for('view_document', id_number=member.IDNumber) }}" class="btn btn-sm btn-info" target="_blank" title="View Document">
+                                <i class="bi bi-file-earmark-text"></i>
+                            </a>
+                        {% else %}
+                            <span class="badge bg-secondary">Not uploaded</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
                         <a href="{{ url_for('view_member_details', id_number=member.IDNumber) }}" class="btn btn-sm btn-info me-1" title="Preview">
                             <i class="bi bi-eye"></i>
                         </a>
@@ -86,7 +96,7 @@
             </tbody>
             <tfoot>
                 <tr class="table-info">
-                    <td colspan="8">
+                    <td colspan="9">
                         <strong>Total Members: {{ members|length }}</strong>
                     </td>
                 </tr>

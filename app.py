@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, send_file
+from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, send_file, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
@@ -10,6 +10,7 @@ from urllib.parse import quote, unquote
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this to a secure secret key
@@ -49,6 +50,7 @@ class Member(db.Model):
     MobileNo = db.Column(db.String(20))
     IDNumber = db.Column(db.String(20), unique=True, nullable=False)
     IDType = db.Column(db.String(20))
+    IDDocument = db.Column(db.String(255))  # Store the file path
     Nationality = db.Column(db.String(100))
     MembershipCategory = db.Column(db.String(50))
     Address = db.Column(db.String(200))
@@ -85,6 +87,18 @@ def init_db():
             print("Warning: Invalid JSON format in idnumbers.json")
         except Exception as e:
             print(f"Error reading idnumbers.json: {str(e)}")
+
+# Create upload folder if it doesn't exist
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -139,6 +153,11 @@ def edit_member(id_number):
         form.City.choices = [('', 'Select City')] + [(city, city) for city in cities]
     
     if request.method == 'POST':
+        # Security check: ensure ID Number hasn't been tampered with
+        if form.IDNumber.data != decoded_id:
+            flash('Invalid request: ID Number cannot be modified.', 'error')
+            return redirect(url_for('index'))
+            
         # Update city choices based on form data
         nationality = request.form.get('Nationality')
         if nationality:
@@ -146,6 +165,39 @@ def edit_member(id_number):
             form.City.choices = [('', 'Select City')] + [(city, city) for city in cities]
     
     if form.validate_on_submit():
+        # Additional security check before saving
+        if form.IDNumber.data != decoded_id:
+            flash('Invalid request: ID Number cannot be modified.', 'error')
+            return redirect(url_for('index'))
+        
+        # Handle file upload first
+        if form.IDDocument.data:
+            file = form.IDDocument.data
+            if file and allowed_file(file.filename):
+                try:
+                    # Create a secure filename with member's ID number
+                    filename = secure_filename(f"{member.IDNumber}_{file.filename}")
+                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                    
+                    # Remove old file if it exists
+                    if member.IDDocument and os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], member.IDDocument)):
+                        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], member.IDDocument))
+                    
+                    # Save new file
+                    file.save(file_path)
+                    
+                    # Store only the filename in the form data
+                    form.IDDocument.data = filename
+                    
+                except Exception as e:
+                    print(f"Error saving file: {str(e)}")
+                    flash('Error uploading document. Please try again.', 'error')
+                    return render_template('edit.html', form=form, today=datetime.now().strftime('%Y-%m-%d'))
+            else:
+                flash('Invalid file type. Please upload a PDF or image file.', 'error')
+                return render_template('edit.html', form=form, today=datetime.now().strftime('%Y-%m-%d'))
+            
+        # Now populate the model with form data
         form.populate_obj(member)
         
         # Get country code based on nationality
@@ -161,7 +213,9 @@ def edit_member(id_number):
             flash('An error occurred while updating your information. Please try again.', 'error')
             print(f"Error: {str(e)}")
             
-    return render_template('edit.html', form=form)
+    # Get today's date for the date input max attribute
+    today = datetime.now().strftime('%Y-%m-%d')
+    return render_template('edit.html', form=form, today=today)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -276,6 +330,24 @@ def view_member_details(id_number):
         return redirect(url_for('backoffice'))
         
     return render_template('details.html', member=member, is_admin=True)
+
+@app.route('/view_document/<path:id_number>')
+@login_required
+def view_document(id_number):
+    """View uploaded ID document"""
+    decoded_id = unquote(id_number)
+    member = Member.query.filter_by(IDNumber=decoded_id).first()
+    
+    if not member or not member.IDDocument:
+        flash('Document not found.', 'error')
+        return redirect(url_for('backoffice') if current_user.is_authenticated else url_for('index'))
+        
+    try:
+        return send_from_directory(app.config['UPLOAD_FOLDER'], member.IDDocument)
+    except Exception as e:
+        print(f"Error serving file: {str(e)}")
+        flash('Error accessing document.', 'error')
+        return redirect(url_for('backoffice') if current_user.is_authenticated else url_for('index'))
 
 # Make sure init_db() is called when the app starts
 with app.app_context():

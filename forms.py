@@ -1,4 +1,5 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, SelectField, FloatField
 from wtforms.validators import DataRequired, Email, ValidationError, Regexp, Optional, NumberRange
 from datetime import datetime
@@ -103,6 +104,25 @@ COUNTRY_DATA = {
     }
 }
 
+def validate_date(form, field):
+    if not field.data:
+        return
+    try:
+        # Try to parse the date
+        datetime.strptime(field.data, '%Y-%m-%d')
+        
+        # Check if date is not in the future
+        if datetime.strptime(field.data, '%Y-%m-%d') > datetime.now():
+            raise ValidationError('Date of birth cannot be in the future')
+            
+        # Check if person is at least 18 years old
+        age = (datetime.now() - datetime.strptime(field.data, '%Y-%m-%d')).days / 365.25
+        if age < 18:
+            raise ValidationError('You must be at least 18 years old to register')
+            
+    except ValueError:
+        raise ValidationError('Invalid date format. Use YYYY-MM-DD')
+
 class MemberForm(FlaskForm):
     FirstName = StringField('First Name', validators=[
         DataRequired(message='First Name is required'),
@@ -123,7 +143,8 @@ class MemberForm(FlaskForm):
         Email(message='Please enter a valid email address')
     ])
     DateofBirth = StringField('Date of Birth', validators=[
-        DataRequired(message='Date of Birth is required')
+        DataRequired(message='Date of Birth is required'),
+        validate_date
     ])
     MobileNo = StringField('Mobile Number', validators=[DataRequired()])
     IDNumber = StringField('ID Number', validators=[
@@ -131,6 +152,10 @@ class MemberForm(FlaskForm):
         Regexp(r'^\d{6}/\d{2}/\d{1}$', message="Invalid ID Number format. Example: 243095/64/1")
     ])
     IDType = SelectField('ID Type', choices=[('', 'Select ID Type'), ('NRC', 'NRC'), ('Passport', 'Passport')], validators=[DataRequired()])
+    IDDocument = FileField('ID Document', validators=[
+        DataRequired(message='Please upload your ID document'),
+        FileAllowed(['pdf', 'png', 'jpg', 'jpeg'], 'Only PDF and image files are allowed!')
+    ])
     
     Nationality = SelectField('Nationality', choices=[('', 'Select Country')] + [(country, country) for country in COUNTRY_DATA.keys()], validators=[DataRequired(message='Please select your nationality')])
     
@@ -153,14 +178,6 @@ class MemberForm(FlaskForm):
         DataRequired(message='Monthly deduction is required'),
         NumberRange(min=0, message='Monthly deduction must be a positive number')
     ])
-
-    def validate_DateofBirth(self, field):
-        try:
-            date = datetime.strptime(field.data, '%d/%m/%Y')
-            if date > datetime.now():
-                raise ValidationError('Date of Birth cannot be in the future')
-        except ValueError:
-            raise ValidationError('Invalid date format. Use DD/MM/YYYY')
 
     def validate_MobileNo(self, field):
         if not field.data.startswith('260'):

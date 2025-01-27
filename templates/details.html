@@ -37,12 +37,20 @@
                         <tr>
                             <th>ID Type:</th>
                             <td>{{ member.IDType }}</td>
-                            <th>Nationality:</th>
-                            <td>{{ member.Nationality }}</td>
+                            <th>ID Document:</th>
+                            <td>
+                                {% if member.IDDocument %}
+                                    <a href="{{ url_for('view_document', id_number=member.IDNumber) }}" target="_blank" class="btn btn-sm btn-info">
+                                        <i class="bi bi-file-earmark-text"></i> View Document
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Not uploaded</span>
+                                {% endif %}
+                            </td>
                         </tr>
                         <tr>
-                            <th>Address:</th>
-                            <td>{{ member.Address }}</td>
+                            <th>Nationality:</th>
+                            <td>{{ member.Nationality }}</td>
                             <th>Country Code:</th>
                             <td>{{ member.CountryCode }}</td>
                         </tr>
