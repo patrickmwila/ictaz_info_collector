@@ -180,9 +180,10 @@ class MemberForm(FlaskForm):
     ])
 
     def validate_MobileNo(self, field):
-        if not field.data.startswith('260'):
-            raise ValidationError('Mobile number must start with 260 (Zambia country code)')
+        if self.Nationality.data == 'Zambian':
+            if not field.data.startswith('260'):
+                raise ValidationError('For Zambian numbers, mobile number must start with 260 (Zambia country code)')
         if not field.data.isdigit():
             raise ValidationError('Mobile number must contain only digits')
         if len(field.data) != 12:
-            raise ValidationError('Mobile number must be 12 digits long (including 260)')
+            raise ValidationError('Mobile number must be 12 digits long (including country code)')

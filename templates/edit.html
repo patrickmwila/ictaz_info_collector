@@ -128,6 +128,9 @@
                                             {% if form.MobileNo.errors %}
                                                 <div class="alert alert-danger">{{ form.MobileNo.errors[0] }}</div>
                                             {% endif %}
+                                            <small class="text-muted phone-hint" id="phoneHint">
+                                                Mobile number must be 12 digits long (including country code)
+                                            </small>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -209,10 +212,19 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Handle country selection
-    const nationalitySelect = document.querySelector('#Nationality');
+    const nationalitySelect = document.querySelector('select[name="Nationality"]');
     const countryCodeInput = document.querySelector('#CountryCode');
     const citySelect = document.querySelector('#City');
-
+    const phoneHint = document.getElementById('phoneHint');
+    
+    function updatePhoneHint() {
+        if (nationalitySelect.value === 'Zambian') {
+            phoneHint.textContent = 'For Zambian numbers, mobile number must start with 260 (Zambia country code) and be 12 digits long';
+        } else {
+            phoneHint.textContent = 'Mobile number must be 12 digits long (including country code)';
+        }
+    }
+    
     nationalitySelect.addEventListener('change', function() {
         const country = this.value;
         
@@ -233,6 +245,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 countryCodeInput.value = code;
             });
     });
+    
+    nationalitySelect.addEventListener('change', updatePhoneHint);
+    // Run once on page load
+    updatePhoneHint();
 });
 </script>
 {% endblock %}
