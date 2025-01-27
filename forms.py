@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import StringField, SelectField, FloatField
+from wtforms import StringField, SelectField, FloatField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Email, ValidationError, Regexp, Optional, NumberRange
 from datetime import datetime
 
@@ -187,3 +187,8 @@ class MemberForm(FlaskForm):
             raise ValidationError('Mobile number must contain only digits')
         if len(field.data) != 12:
             raise ValidationError('Mobile number must be 12 digits long (including country code)')
+
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')

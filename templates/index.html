@@ -1,35 +1,262 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="text-center">Enter Your ID Number</h2>
-                </div>
-                <div class="card-body">
-                    <form method="POST">
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, rgba(0, 86, 179, 0.95), rgba(0, 61, 130, 0.9));
+        color: white;
+        padding: 4rem 0;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('https://img.freepik.com/free-vector/abstract-technology-particle-background_52683-25766.jpg');
+        background-size: cover;
+        opacity: 0.1;
+        z-index: 0;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .logo-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 3rem;
+        padding: 0 2rem;
+    }
+
+    .logo-container img.ictaz-logo {
+        height: 150px;
+        object-fit: contain;
+        transition: transform 0.3s ease;
+    }
+
+    .logo-container img.smz-logo {
+        height: 100px;
+        object-fit: contain;
+        transition: transform 0.3s ease;
+    }
+
+    .logo-container img:hover {
+        transform: scale(1.05);
+    }
+
+    .main-heading {
+        font-size: 2.8rem;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .sub-heading {
+        font-size: 1.2rem;
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto;
+        line-height: 1.6;
+        opacity: 0.9;
+    }
+
+    .section-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(0, 86, 179, 0.1);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .section-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, #0056b3, #00a0e9);
+    }
+
+    .section-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.12);
+    }
+
+    .section-title {
+        color: #0056b3;
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .section-title i {
+        font-size: 1.5rem;
+        opacity: 0.8;
+    }
+
+    .section-text {
+        color: #555;
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+        line-height: 1.6;
+    }
+
+    .form-control {
+        padding: 0.8rem 1.2rem;
+        font-size: 1.1rem;
+        border: 2px solid #e1e1e1;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        border-color: #0056b3;
+        box-shadow: 0 0 0 0.2rem rgba(0, 86, 179, 0.15);
+    }
+
+    .action-button {
+        background: linear-gradient(90deg, #0056b3, #00a0e9);
+        color: white;
+        padding: 1rem 2.5rem;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.3s ease;
+        border: none;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .action-button:hover {
+        background: linear-gradient(90deg, #003d82, #0056b3);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
+    }
+
+    .contact-info {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-top: 1.5rem;
+        border: 1px solid #e1e1e1;
+    }
+
+    .contact-info a {
+        color: #0056b3;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color 0.3s ease;
+    }
+
+    .contact-info a:hover {
+        color: #003d82;
+    }
+
+    .alert {
+        border-radius: 10px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+        border: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+
+    @media (max-width: 768px) {
+        .logo-container {
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .main-heading {
+            font-size: 2rem;
+        }
+
+        .section-card {
+            padding: 2rem;
+        }
+    }
+</style>
+
+<div class="container-fluid px-0">
+    <div class="hero-section">
+        <div class="container hero-content">
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='images/ictaz-logo.png') }}" alt="ICTAZ Logo" class="img-fluid ictaz-logo">
+                <img src="{{ url_for('static', filename='images/smz-logo.png') }}" alt="Smart Zambia Logo" class="img-fluid smz-logo">
+            </div>
+            <h1 class="main-heading">ICTAZ PUBLIC SERVICE WORKERS<br>KYC VERIFICATION</h1>
+            <p class="sub-heading">
+                This site will help collect your KYC's in readiness to onboard you onto the New ICTAZ Membership System 
+            </p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="section-card">
+                    <h2 class="section-title">
+                        <i class="fas fa-user-check"></i>
+                        MEMBER VERIFICATION
+                    </h2>
+                    <p class="section-text">
+                        Proceed to verify your personal details. Enter your ID number below to begin the verification process.
+                    </p>
+                    <form method="POST" action="{{ url_for('index') }}" enctype="multipart/form-data" class="mb-3">
                         {{ form.csrf_token }}
-                        <div class="mb-3">
-                            <label for="IDNumber" class="form-label">ID Number:</label>
-                            {{ form.IDNumber(class="form-control" + (" is-invalid" if form.IDNumber.errors else ""), placeholder="Enter your ID number (e.g., 243095/64/1)") }}
+                        <div class="form-group mb-4">
+                            {{ form.IDNumber.label(class="form-label fw-bold") }}
+                            {{ form.IDNumber(class="form-control", placeholder="Enter your ID number (e.g., 243095/64/1)") }}
                             {% if form.IDNumber.errors %}
-                                <div class="invalid-feedback">
+                                <div class="alert alert-danger mt-2">
+                                    <i class="fas fa-exclamation-circle me-2"></i>
                                     {{ form.IDNumber.errors[0] }}
                                 </div>
-                                <script>
-                                    showAlert('Error', '{{ form.IDNumber.errors[0] }}', 'error');
-                                </script>
                             {% endif %}
                         </div>
-                        <div class="text-center">
-                            <button type="submit" class="btn btn-primary">Search</button>
-                        </div>
+                        <button type="submit" class="action-button">
+                            <i class="fas fa-arrow-right me-2"></i>
+                            Proceed to Verification
+                        </button>
                     </form>
                 </div>
             </div>
         </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} d-flex align-items-center">
+                        {% if category == 'success' %}
+                            <i class="fas fa-check-circle me-2"></i>
+                        {% elif category == 'error' %}
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                        {% endif %}
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
     </div>
 </div>
 {% endblock %}

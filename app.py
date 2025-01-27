@@ -5,7 +5,7 @@ import json
 import csv
 import io
 import os
-from forms import MemberForm, COUNTRY_DATA
+from forms import MemberForm, LoginForm, COUNTRY_DATA
 from urllib.parse import quote, unquote
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -219,19 +219,20 @@ def edit_member(id_number):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        user = User.query.filter_by(username=username).first()
+    if current_user.is_authenticated:
+        return redirect(url_for('backoffice'))
         
-        if user and user.check_password(password):
+    form = LoginForm()
+    if form.validate_on_submit():
+        user = User.query.filter_by(username=form.username.data).first()
+        if user and user.check_password(form.password.data):
             login_user(user)
             flash('Logged in successfully.', 'success')
             return redirect(url_for('backoffice'))
         else:
             flash('Invalid username or password.', 'error')
             
-    return render_template('login.html')
+    return render_template('login.html', form=form)
 
 @app.route('/logout')
 @login_required
