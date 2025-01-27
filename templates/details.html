@@ -41,13 +41,30 @@
                             <td>{{ member.Nationality }}</td>
                         </tr>
                         <tr>
+                            <th>Address:</th>
+                            <td>{{ member.Address }}</td>
+                            <th>Country Code:</th>
+                            <td>{{ member.CountryCode }}</td>
+                        </tr>
+                        <tr>
+                            <th>City:</th>
+                            <td>{{ member.City }}</td>
+                            <th>Monthly Deduction:</th>
+                            <td>{{ "K%.2f"|format(member.MonthlyDeduction) if member.MonthlyDeduction }}</td>
+                        </tr>
+                        <tr>
                             <th>Membership Category:</th>
                             <td colspan="3">{{ member.MembershipCategory }}</td>
                         </tr>
                     </table>
                 </div>
                 <div class="text-center mt-3">
-                    <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
+                    {% if is_admin %}
+                        <a href="{{ url_for('edit_member', id_number=member.IDNumber) }}" class="btn btn-primary me-2">Edit Details</a>
+                        <a href="{{ url_for('backoffice') }}" class="btn btn-secondary">Back to Records</a>
+                    {% else %}
+                        <a href="{{ url_for('index') }}" class="btn btn-primary">Back to Home</a>
+                    {% endif %}
                 </div>
             </div>
         </div>

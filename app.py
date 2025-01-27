@@ -5,7 +5,7 @@ import json
 import csv
 import io
 import os
-from forms import MemberForm
+from forms import MemberForm, COUNTRY_DATA
 from urllib.parse import quote, unquote
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
@@ -36,46 +36,6 @@ class User(UserMixin, db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-def init_db():
-    with app.app_context():
-        print("Initializing database...")
-        db.create_all()
-        
-        # Create admin user if not exists
-        if not User.query.filter_by(username='admin').first():
-            print("Creating admin user...")
-            admin = User(username='admin')
-            admin.set_password('ICTAZ@admin2024')
-            db.session.add(admin)
-        
-        # Read ID numbers from JSON file
-        try:
-            print("Reading idnumbers.json...")
-            with open('idnumbers.json', 'r') as file:
-                id_data = json.load(file)
-                id_numbers = id_data.get('IDNumbers', [])
-                # print(f"Found {len(id_numbers)} ID numbers in JSON file")
-                
-                # Create initial member records
-                for id_number in id_numbers:
-                    if not Member.query.filter_by(IDNumber=id_number).first():
-                        # print(f"Adding member with ID: {id_number}")
-                        member = Member(IDNumber=id_number)
-                        db.session.add(member)
-                    else:
-                        # print(f"Member with ID {id_number} already exists")
-                        pass
-                
-            db.session.commit()
-            print("Database initialization complete")
-            
-        except FileNotFoundError:
-            print("Warning: idnumbers.json not found. No initial members created.")
-        except json.JSONDecodeError:
-            print("Warning: Invalid JSON format in idnumbers.json")
-        except Exception as e:
-            print(f"Error reading idnumbers.json: {str(e)}")
-
 class Member(db.Model):
     __tablename__ = 'Members'
     
@@ -85,64 +45,123 @@ class Member(db.Model):
     LastName = db.Column(db.String(100))
     Gender = db.Column(db.String(10))
     Email = db.Column(db.String(120))
-    DateofBirth = db.Column(db.String(10))
-    MobileNo = db.Column(db.String(15))
+    DateofBirth = db.Column(db.String(20))
+    MobileNo = db.Column(db.String(20))
     IDNumber = db.Column(db.String(20), unique=True, nullable=False)
-    IDType = db.Column(db.String(10))
-    Nationality = db.Column(db.String(50), default='Zambian')
-    MembershipCategory = db.Column(db.String(20))
+    IDType = db.Column(db.String(20))
+    Nationality = db.Column(db.String(100))
+    MembershipCategory = db.Column(db.String(50))
+    Address = db.Column(db.String(200))
+    CountryCode = db.Column(db.String(2))
+    City = db.Column(db.String(100))
+    MonthlyDeduction = db.Column(db.Float)
+
+def init_db():
+    with app.app_context():
+        db.create_all()
+        
+        # Create admin user if not exists
+        if not User.query.filter_by(username='admin').first():
+            admin = User(username='admin')
+            admin.set_password('echoroot')
+            db.session.add(admin)
+        
+        # Read ID numbers from JSON file
+        try:
+            with open('idnumbers.json', 'r') as file:
+                id_data = json.load(file)
+                id_numbers = id_data.get('IDNumbers', [])
+                
+                # Create initial member records
+                for id_number in id_numbers:
+                    if not Member.query.filter_by(IDNumber=id_number).first():
+                        member = Member(IDNumber=id_number)
+                        db.session.add(member)
+                
+            db.session.commit()
+        except FileNotFoundError:
+            print("Warning: idnumbers.json not found. No initial members created.")
+        except json.JSONDecodeError:
+            print("Warning: Invalid JSON format in idnumbers.json")
+        except Exception as e:
+            print(f"Error reading idnumbers.json: {str(e)}")
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = MemberForm()
+    
     if request.method == 'POST':
         if not form.IDNumber.data:
             flash('Please enter an ID Number.', 'warning')
             return render_template('index.html', form=form)
             
         id_number = form.IDNumber.data.strip()
+        
+        # Validate NRC format (e.g., 243095/64/1)
+        import re
+        if not re.match(r'^\d{6}/\d{2}/\d{1}$', id_number):
+            flash('Invalid ID Number format. Please use the format: XXXXXX/XX/X (e.g., 243095/64/1)', 'error')
+            return render_template('index.html', form=form)
+        
+        # Check if we already have a record
         member = Member.query.filter_by(IDNumber=id_number).first()
         
-        if not member:
-            flash('ID Number not found in our records. Please contact support for assistance.', 'error')
-            return render_template('index.html', form=form)
-            
-        if member.FirstName:  # If member has already submitted details
+        if member and member.FirstName:  # If member has already submitted details
             flash('Your details have been retrieved successfully.', 'success')
             return render_template('details.html', member=member)
         else:
-            # URL encode the ID number
+            # URL encode the ID number for the redirect
             encoded_id = quote(id_number)
             return redirect(url_for('edit_member', id_number=encoded_id))
             
     return render_template('index.html', form=form)
 
-@app.route('/member/<path:id_number>', methods=['GET', 'POST'])
+@app.route('/edit_member/<path:id_number>', methods=['GET', 'POST'])
 def edit_member(id_number):
-    # URL decode the ID number
     decoded_id = unquote(id_number)
     member = Member.query.filter_by(IDNumber=decoded_id).first()
     
     if not member:
-        flash('ID Number not found in our records. Please contact support for assistance.', 'error')
-        return redirect(url_for('index'))
-        
-    if member.FirstName:  # If member has already submitted details
-        flash('Your details have already been submitted. Contact support if you need to make changes.', 'info')
-        return render_template('details.html', member=member)
-        
+        member = Member(IDNumber=decoded_id)
+        db.session.add(member)
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            flash('An error occurred while creating your record. Please try again.', 'error')
+            return redirect(url_for('index'))
+    
     form = MemberForm(obj=member)
+    
+    # Update city choices based on nationality
+    if member.Nationality:
+        cities = COUNTRY_DATA.get(member.Nationality, {}).get('cities', [])
+        form.City.choices = [('', 'Select City')] + [(city, city) for city in cities]
+    
+    if request.method == 'POST':
+        # Update city choices based on form data
+        nationality = request.form.get('Nationality')
+        if nationality:
+            cities = COUNTRY_DATA.get(nationality, {}).get('cities', [])
+            form.City.choices = [('', 'Select City')] + [(city, city) for city in cities]
     
     if form.validate_on_submit():
         form.populate_obj(member)
-        db.session.commit()
-        flash('Your information has been successfully saved! Please note that you cannot edit this information once submitted.', 'success')
-        return redirect(url_for('index'))
-    
-    if form.errors:
-        flash('Please correct the errors in the form before submitting.', 'warning')
         
-    return render_template('edit.html', form=form, member=member)
+        # Get country code based on nationality
+        country_data = COUNTRY_DATA.get(member.Nationality, {})
+        member.CountryCode = country_data.get('code', '')
+        
+        try:
+            db.session.commit()
+            flash('Your information has been updated successfully!', 'success')
+            return redirect(url_for('index'))
+        except Exception as e:
+            db.session.rollback()
+            flash('An error occurred while updating your information. Please try again.', 'error')
+            print(f"Error: {str(e)}")
+            
+    return render_template('edit.html', form=form)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -206,7 +225,7 @@ def export_csv():
         # Write headers
         headers = ['FirstName', 'MiddleName', 'LastName', 'Gender', 'Email', 
                   'DateofBirth', 'MobileNo', 'IDNumber', 'IDType', 'Nationality', 
-                  'MembershipCategory']
+                  'MembershipCategory', 'Address', 'CountryCode', 'City', 'MonthlyDeduction']
         cw.writerow(headers)
         
         # Write data
@@ -216,7 +235,8 @@ def export_csv():
                 member.FirstName, member.MiddleName, member.LastName,
                 member.Gender, member.Email, member.DateofBirth,
                 member.MobileNo, member.IDNumber, member.IDType,
-                member.Nationality, member.MembershipCategory
+                member.Nationality, member.MembershipCategory,
+                member.Address, member.CountryCode, member.City, member.MonthlyDeduction
             ])
         
         output = si.getvalue()
@@ -231,6 +251,31 @@ def export_csv():
     except Exception as e:
         flash('An error occurred while exporting the data. Please try again.', 'error')
         return redirect(url_for('index'))
+
+@app.route('/get_cities/<country>')
+def get_cities(country):
+    """Get cities for a given country"""
+    cities = COUNTRY_DATA.get(country, {}).get('cities', [])
+    return jsonify(cities)
+
+@app.route('/get_country_code/<country>')
+def get_country_code(country):
+    """Get country code for a given country"""
+    code = COUNTRY_DATA.get(country, {}).get('code', '')
+    return jsonify(code)
+
+@app.route('/view_member_details/<path:id_number>')
+@login_required
+def view_member_details(id_number):
+    """View member details from backoffice"""
+    decoded_id = unquote(id_number)
+    member = Member.query.filter_by(IDNumber=decoded_id).first()
+    
+    if not member:
+        flash('Member not found.', 'error')
+        return redirect(url_for('backoffice'))
+        
+    return render_template('details.html', member=member, is_admin=True)
 
 # Make sure init_db() is called when the app starts
 with app.app_context():
