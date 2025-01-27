@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SelectField
-from wtforms.validators import DataRequired, Email, ValidationError, Regexp
+from wtforms.validators import DataRequired, Email, ValidationError, Regexp, Optional
 from datetime import datetime
 
 # Comprehensive list of countries with Zambia at the top
@@ -197,13 +197,35 @@ COUNTRIES = [
 ]
 
 class MemberForm(FlaskForm):
-    FirstName = StringField('First Name', validators=[DataRequired()])
-    MiddleName = StringField('Middle Name')
-    LastName = StringField('Last Name', validators=[DataRequired()])
-    Gender = SelectField('Gender', choices=[('', 'Select Gender'), ('Male', 'Male'), ('Female', 'Female')], validators=[DataRequired()])
-    Email = StringField('Email', validators=[DataRequired(), Email()])
-    DateofBirth = StringField('Date of Birth', validators=[DataRequired()])
+    FirstName = StringField('First Name', validators=[
+        DataRequired(message='First Name is required'),
+        Regexp('^[A-Za-z]+$', message='First Name must contain only letters')
+    ])
+    
+    MiddleName = StringField('Middle Name', validators=[
+        Optional(),
+        Regexp('^[A-Za-z]*$', message='Middle Name must contain only letters')
+    ])
+    
+    LastName = StringField('Last Name', validators=[
+        DataRequired(message='Last Name is required'),
+        Regexp('^[A-Za-z]+$', message='Last Name must contain only letters')
+    ])
+    
+    Gender = SelectField('Gender', choices=[('', 'Select Gender'), ('Male', 'Male'), ('Female', 'Female')], 
+                        validators=[DataRequired(message='Please select your gender')])
+    
+    Email = StringField('Email', validators=[
+        DataRequired(message='Email address is required'),
+        Email(message='Please enter a valid email address')
+    ])
+    
+    DateofBirth = StringField('Date of Birth', validators=[
+        DataRequired(message='Date of Birth is required')
+    ])
+    
     MobileNo = StringField('Mobile Number', validators=[DataRequired()])
+    
     IDNumber = StringField('ID Number', validators=[
         DataRequired(message="Please enter an ID Number"),
         Regexp(r'^\d{6}/\d{2}/\d{1}$', message="Invalid ID Number format. Example: 243095/64/1")
@@ -220,14 +242,30 @@ class MemberForm(FlaskForm):
                                           ('Student', 'Student')],
                                    validators=[DataRequired()])
 
+    def validate_DateofBirth(self, field):
+        if not field.data:
+            raise ValidationError('Date of Birth is required')
+        
+        try:
+            # Try to parse the date
+            date = datetime.strptime(field.data, '%d/%m/%Y')
+            
+            # Check if date is not in the future
+            if date > datetime.now():
+                raise ValidationError('Date of Birth cannot be in the future')
+            
+            # Check if person is at least 18 years old
+            age = (datetime.now() - date).days / 365.25
+            if age < 18:
+                raise ValidationError('You must be at least 18 years old')
+                
+        except ValueError:
+            raise ValidationError('Invalid date format. Use DD/MM/YYYY (e.g., 25/12/1990)')
+
     def validate_MobileNo(self, field):
+        if not field.data:
+            raise ValidationError('Mobile number is required')
         if not field.data.startswith('260'):
             raise ValidationError('Mobile number must start with 260')
-        if not field.data[3:].isdigit():
-            raise ValidationError('Invalid mobile number format')
-
-    def validate_DateofBirth(self, field):
-        try:
-            datetime.strptime(field.data, '%d/%m/%Y')
-        except ValueError:
-            raise ValidationError('Invalid date format. Use DD/MM/YYYY')
+        if not field.data[3:].isdigit() or len(field.data) != 12:
+            raise ValidationError('Must be 12 digits total (260 followed by 9 digits)')

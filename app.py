@@ -7,16 +7,79 @@ import io
 import os
 from forms import MemberForm
 from urllib.parse import quote, unquote
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.urandom(24)
+app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this to a secure secret key
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///members.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 db = SQLAlchemy(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(120), nullable=False)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+def init_db():
+    with app.app_context():
+        print("Initializing database...")
+        db.create_all()
+        
+        # Create admin user if not exists
+        if not User.query.filter_by(username='admin').first():
+            print("Creating admin user...")
+            admin = User(username='admin')
+            admin.set_password('ICTAZ@admin2024')
+            db.session.add(admin)
+        
+        # Read ID numbers from JSON file
+        try:
+            print("Reading idnumbers.json...")
+            with open('idnumbers.json', 'r') as file:
+                id_data = json.load(file)
+                id_numbers = id_data.get('IDNumbers', [])
+                # print(f"Found {len(id_numbers)} ID numbers in JSON file")
+                
+                # Create initial member records
+                for id_number in id_numbers:
+                    if not Member.query.filter_by(IDNumber=id_number).first():
+                        # print(f"Adding member with ID: {id_number}")
+                        member = Member(IDNumber=id_number)
+                        db.session.add(member)
+                    else:
+                        # print(f"Member with ID {id_number} already exists")
+                        pass
+                
+            db.session.commit()
+            print("Database initialization complete")
+            
+        except FileNotFoundError:
+            print("Warning: idnumbers.json not found. No initial members created.")
+        except json.JSONDecodeError:
+            print("Warning: Invalid JSON format in idnumbers.json")
+        except Exception as e:
+            print(f"Error reading idnumbers.json: {str(e)}")
 
 class Member(db.Model):
     __tablename__ = 'Members'
     
+    id = db.Column(db.Integer, primary_key=True)
     FirstName = db.Column(db.String(100))
     MiddleName = db.Column(db.String(100))
     LastName = db.Column(db.String(100))
@@ -24,24 +87,10 @@ class Member(db.Model):
     Email = db.Column(db.String(120))
     DateofBirth = db.Column(db.String(10))
     MobileNo = db.Column(db.String(15))
-    IDNumber = db.Column(db.String(20), primary_key=True)
+    IDNumber = db.Column(db.String(20), unique=True, nullable=False)
     IDType = db.Column(db.String(10))
     Nationality = db.Column(db.String(50), default='Zambian')
     MembershipCategory = db.Column(db.String(20))
-
-def init_db():
-    with app.app_context():
-        db.create_all()
-        # Load IDNumbers from JSON file
-        if os.path.exists('idnumbers.json'):
-            with open('idnumbers.json', 'r') as f:
-                data = json.load(f)
-                for id_number in data['IDNumbers']:
-                    # Check if ID already exists
-                    if not Member.query.filter_by(IDNumber=id_number).first():
-                        member = Member(IDNumber=id_number)
-                        db.session.add(member)
-            db.session.commit()
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -95,7 +144,60 @@ def edit_member(id_number):
         
     return render_template('edit.html', form=form, member=member)
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
+            login_user(user)
+            flash('Logged in successfully.', 'success')
+            return redirect(url_for('backoffice'))
+        else:
+            flash('Invalid username or password.', 'error')
+            
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    flash('Logged out successfully.', 'success')
+    return redirect(url_for('index'))
+
+@app.route('/backoffice')
+@login_required
+def backoffice():
+    filter_type = request.args.get('filter', 'all')
+    
+    # Get counts for each category
+    all_members = Member.query.all()
+    updated_members = Member.query.filter(Member.FirstName.isnot(None)).all()
+    not_updated_members = Member.query.filter(Member.FirstName.is_(None)).all()
+    
+    all_count = len(all_members)
+    updated_count = len(updated_members)
+    not_updated_count = len(not_updated_members)
+    
+    # Filter members based on selection
+    if filter_type == 'updated':
+        members = updated_members
+    elif filter_type == 'not_updated':
+        members = not_updated_members
+    else:
+        members = all_members
+    
+    return render_template('backoffice.html', 
+                         members=members,
+                         current_filter=filter_type,
+                         all_count=all_count,
+                         updated_count=updated_count,
+                         not_updated_count=not_updated_count)
+
 @app.route('/export')
+@login_required
 def export_csv():
     try:
         si = io.StringIO()
@@ -130,6 +232,9 @@ def export_csv():
         flash('An error occurred while exporting the data. Please try again.', 'error')
         return redirect(url_for('index'))
 
-if __name__ == '__main__':
+# Make sure init_db() is called when the app starts
+with app.app_context():
     init_db()
+
+if __name__ == '__main__':
     app.run(debug=True)

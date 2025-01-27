@@ -13,8 +13,11 @@
                     <div class="row">
                         <div class="col-md-4 mb-3">
                             <label for="FirstName" class="form-label">First Name:</label>
-                            {{ form.FirstName(class="form-control") }}
+                            {{ form.FirstName(class="form-control" + (" is-invalid" if form.FirstName.errors else ""), placeholder="Enter your first name") }}
                             {% if form.FirstName.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.FirstName.errors[0] }}
+                                </div>
                                 <script>
                                     showAlert('Error', '{{ form.FirstName.errors[0] }}', 'error');
                                 </script>
@@ -22,12 +25,23 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="MiddleName" class="form-label">Middle Name:</label>
-                            {{ form.MiddleName(class="form-control") }}
+                            {{ form.MiddleName(class="form-control" + (" is-invalid" if form.MiddleName.errors else ""), placeholder="Enter your middle name (optional)") }}
+                            {% if form.MiddleName.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.MiddleName.errors[0] }}
+                                </div>
+                                <script>
+                                    showAlert('Error', '{{ form.MiddleName.errors[0] }}', 'error');
+                                </script>
+                            {% endif %}
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="LastName" class="form-label">Last Name:</label>
-                            {{ form.LastName(class="form-control") }}
+                            {{ form.LastName(class="form-control" + (" is-invalid" if form.LastName.errors else ""), placeholder="Enter your last name") }}
                             {% if form.LastName.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.LastName.errors[0] }}
+                                </div>
                                 <script>
                                     showAlert('Error', '{{ form.LastName.errors[0] }}', 'error');
                                 </script>
@@ -38,8 +52,11 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="Gender" class="form-label">Gender:</label>
-                            {{ form.Gender(class="form-select") }}
+                            {{ form.Gender(class="form-select" + (" is-invalid" if form.Gender.errors else "")) }}
                             {% if form.Gender.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.Gender.errors[0] }}
+                                </div>
                                 <script>
                                     showAlert('Error', '{{ form.Gender.errors[0] }}', 'error');
                                 </script>
@@ -47,8 +64,11 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="Email" class="form-label">Email:</label>
-                            {{ form.Email(class="form-control") }}
+                            {{ form.Email(class="form-control" + (" is-invalid" if form.Email.errors else ""), placeholder="Enter your email address") }}
                             {% if form.Email.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.Email.errors[0] }}
+                                </div>
                                 <script>
                                     showAlert('Error', '{{ form.Email.errors[0] }}', 'error');
                                 </script>
@@ -59,8 +79,11 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="DateofBirth" class="form-label">Date of Birth (DD/MM/YYYY):</label>
-                            {{ form.DateofBirth(class="form-control") }}
+                            {{ form.DateofBirth(class="form-control" + (" is-invalid" if form.DateofBirth.errors else ""), placeholder="e.g., 25/12/1990") }}
                             {% if form.DateofBirth.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.DateofBirth.errors[0] }}
+                                </div>
                                 <script>
                                     showAlert('Error', '{{ form.DateofBirth.errors[0] }}', 'error');
                                 </script>
@@ -68,8 +91,11 @@
                         </div>
                         <div class="col-md-6 mb-3">
                             <label for="MobileNo" class="form-label">Mobile Number (start with 260):</label>
-                            {{ form.MobileNo(class="form-control") }}
+                            {{ form.MobileNo(class="form-control" + (" is-invalid" if form.MobileNo.errors else ""), placeholder="e.g., 260977123456") }}
                             {% if form.MobileNo.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.MobileNo.errors[0] }}
+                                </div>
                                 <script>
                                     showAlert('Error', '{{ form.MobileNo.errors[0] }}', 'error');
                                 </script>
@@ -84,8 +110,11 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="IDType" class="form-label">ID Type:</label>
-                            {{ form.IDType(class="form-select") }}
+                            {{ form.IDType(class="form-select" + (" is-invalid" if form.IDType.errors else "")) }}
                             {% if form.IDType.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.IDType.errors[0] }}
+                                </div>
                                 <script>
                                     showAlert('Error', '{{ form.IDType.errors[0] }}', 'error');
                                 </script>
@@ -93,14 +122,25 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <label for="Nationality" class="form-label">Nationality:</label>
-                            {{ form.Nationality(class="form-select") }}
+                            {{ form.Nationality(class="form-select" + (" is-invalid" if form.Nationality.errors else "")) }}
+                            {% if form.Nationality.errors %}
+                                <div class="invalid-feedback">
+                                    {{ form.Nationality.errors[0] }}
+                                </div>
+                                <script>
+                                    showAlert('Error', '{{ form.Nationality.errors[0] }}', 'error');
+                                </script>
+                            {% endif %}
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="MembershipCategory" class="form-label">Membership Category:</label>
-                        {{ form.MembershipCategory(class="form-select") }}
+                        {{ form.MembershipCategory(class="form-select" + (" is-invalid" if form.MembershipCategory.errors else "")) }}
                         {% if form.MembershipCategory.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.MembershipCategory.errors[0] }}
+                            </div>
                             <script>
                                 showAlert('Error', '{{ form.MembershipCategory.errors[0] }}', 'error');
                             </script>

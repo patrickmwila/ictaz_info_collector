@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2>Member Records Management</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">Logout</a>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="btn-group" role="group">
+                <a href="{{ url_for('backoffice', filter='all') }}" 
+                   class="btn btn-{{ 'primary' if current_filter == 'all' else 'outline-primary' }}">
+                    All Records ({{ all_count }})
+                </a>
+                <a href="{{ url_for('backoffice', filter='updated') }}" 
+                   class="btn btn-{{ 'primary' if current_filter == 'updated' else 'outline-primary' }}">
+                    Updated Records ({{ updated_count }})
+                </a>
+                <a href="{{ url_for('backoffice', filter='not_updated') }}" 
+                   class="btn btn-{{ 'primary' if current_filter == 'not_updated' else 'outline-primary' }}">
+                    Not Updated Records ({{ not_updated_count }})
+                </a>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('export_csv') }}" class="btn btn-success">
+                <i class="bi bi-download"></i> Export to CSV
+            </a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>SN</th>
+                    <th>ID Number</th>
+                    <th>Status</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Mobile</th>
+                    <th>Membership Category</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for member in members %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ member.IDNumber }}</td>
+                    <td>
+                        {% if member.FirstName %}
+                            <span class="badge bg-success">Updated</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">Not Updated</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if member.FirstName %}
+                            {{ member.FirstName }} {{ member.MiddleName or '' }} {{ member.LastName }}
+                        {% else %}
+                            <!-- <em class="text-muted">Not provided</em> -->
+                             Not provided
+                        {% endif %}
+                    </td>
+                    <td>{{ member.Email or 'Not provided' }}</td>
+                    <td>{{ member.MobileNo or 'Not provided' }}</td>
+                    <td>{{ member.MembershipCategory or 'Not provided' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr class="table-info">
+                    <td colspan="7">
+                        <strong>Total Members: {{ members|length }}</strong>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>
+{% endblock %}
