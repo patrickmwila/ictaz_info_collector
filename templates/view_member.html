@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+                            {% if category == 'error' %}
+                                <i class="fas fa-exclamation-circle me-2"></i>
+                            {% elif category == 'success' %}
+                                <i class="fas fa-check-circle me-2"></i>
+                            {% elif category == 'warning' %}
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                            {% else %}
+                                <i class="fas fa-info-circle me-2"></i>
+                            {% endif %}
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Member Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <tbody>
+                                <tr>
+                                    <th class="bg-light" style="width: 30%">PMEC ID Number</th>
+                                    <td>{{ member.IDNumber }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">First Name</th>
+                                    <td>{{ member.FirstName }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Middle Name</th>
+                                    <td>{{ member.MiddleName or 'N/A' }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Last Name</th>
+                                    <td>{{ member.LastName }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Gender</th>
+                                    <td>{{ member.Gender }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Email</th>
+                                    <td>{{ member.Email }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Date of Birth</th>
+                                    <td>{{ member.DateofBirth }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Mobile Number</th>
+                                    <td>{{ member.MobileNo }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">ID Type</th>
+                                    <td>{{ member.IDType }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Nationality</th>
+                                    <td>{{ member.Nationality }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Membership Category</th>
+                                    <td>{{ member.MembershipCategory }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Address</th>
+                                    <td>{{ member.Address }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">City</th>
+                                    <td>{{ member.City }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Monthly Deduction</th>
+                                    <td>{{ member.MonthlyDeduction }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">ID Document</th>
+                                    <td>
+                                        {% if member.IDDocument %}
+                                            <a href="{{ url_for('static', filename='uploads/' + member.IDDocument) }}" target="_blank" class="btn btn-sm btn-primary">
+                                                <i class="fas fa-file-pdf me-2"></i>View Document
+                                            </a>
+                                        {% else %}
+                                            No document uploaded
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

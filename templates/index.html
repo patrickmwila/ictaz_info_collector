@@ -167,6 +167,25 @@
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
     }
+
+    .flash-message {
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 8px;
+        font-weight: 500;
+    }
+
+    .flash-message.error {
+        background-color: #fee2e2;
+        border: 1px solid #ef4444;
+        color: #991b1b;
+    }
+
+    .flash-message.success {
+        background-color: #dcfce7;
+        border: 1px solid #22c55e;
+        color: #166534;
+    }
 </style>
 
 <div class="container-fluid px-0">
@@ -186,7 +205,38 @@
     <div class="container">
         <div class="row justify-content-center">
             <div class="col-md-8">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+                                {% if category == 'error' %}
+                                    <i class="fas fa-exclamation-circle me-2"></i>
+                                {% elif category == 'success' %}
+                                    <i class="fas fa-check-circle me-2"></i>
+                                {% elif category == 'warning' %}
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                {% else %}
+                                    <i class="fas fa-info-circle me-2"></i>
+                                {% endif %}
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
                 <div class="section-card">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="flash-message {{ category }}">
+                                    <i class="fas {% if category == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %} me-2"></i>
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
                     <h2 class="section-title">
                         <i class="fas fa-user-check"></i>
                         MEMBER VERIFICATION
@@ -198,7 +248,7 @@
                         {{ form.csrf_token }}
                         <div class="form-group mb-4">
                             {{ form.IDNumber.label(class="form-label fw-bold") }}
-                            {{ form.IDNumber(class="form-control", placeholder="Enter your PMEC ID number") }}
+                            {{ form.IDNumber(class="form-control", placeholder="Enter your PMEC ID number", autocomplete="off") }}
                             {% if form.IDNumber.errors %}
                                 <div class="alert alert-danger mt-2">
                                     <i class="fas fa-exclamation-circle me-2"></i>

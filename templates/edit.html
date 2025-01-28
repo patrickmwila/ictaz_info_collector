@@ -4,6 +4,17 @@
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-md-10">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h2 class="text-center mb-0">KYC Verification</h2>
@@ -125,27 +136,6 @@
                             </div>
                             <div class="card-body">
                                 <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            {{ form.MobileNo.label(class="form-label required") }}
-                                            {{ form.MobileNo(class="form-control") }}
-                                            {% if form.MobileNo.errors %}
-                                                <div class="alert alert-danger">{{ form.MobileNo.errors[0] }}</div>
-                                            {% endif %}
-                                            <small class="text-muted phone-hint" id="phone-hint">
-                                                Mobile number must be 12 digits long (including country code)
-                                            </small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            {{ form.Address.label(class="form-label required") }}
-                                            {{ form.Address(class="form-control") }}
-                                            {% if form.Address.errors %}
-                                                <div class="alert alert-danger">{{ form.Address.errors[0] }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
                                     <div class="col-md-4">
                                         <div class="form-group">
                                             {{ form.Nationality.label(class="form-label required") }}
@@ -167,6 +157,27 @@
                                             {{ form.City(class="form-select") }}
                                             {% if form.City.errors %}
                                                 <div class="alert alert-danger">{{ form.City.errors[0] }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            {{ form.MobileNo.label(class="form-label required") }}
+                                            {{ form.MobileNo(class="form-control") }}
+                                            {% if form.MobileNo.errors %}
+                                                <div class="alert alert-danger">{{ form.MobileNo.errors[0] }}</div>
+                                            {% endif %}
+                                            <small class="text-muted phone-hint" id="phone-hint">
+                                                Mobile number must be 12 digits long (including country code)
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            {{ form.Address.label(class="form-label required") }}
+                                            {{ form.Address(class="form-control") }}
+                                            {% if form.Address.errors %}
+                                                <div class="alert alert-danger">{{ form.Address.errors[0] }}</div>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -272,5 +283,56 @@ function confirmSubmit(formId) {
         }
     });
 }
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nationalitySelect = document.getElementById('Nationality');
+    const citySelect = document.getElementById('City');
+    
+    // Function to update cities
+    function updateCities(nationality) {
+        if (!nationality) {
+            citySelect.innerHTML = '<option value="">Select City</option>';
+            return;
+        }
+        
+        fetch(`/update_cities/${nationality}`)
+            .then(response => response.json())
+            .then(data => {
+                citySelect.innerHTML = '<option value="">Select City</option>';
+                data.cities.forEach(city => {
+                    const option = new Option(city, city);
+                    citySelect.add(option);
+                });
+                
+                // If there's a previously selected city, try to reselect it
+                const previousCity = citySelect.getAttribute('data-previous');
+                if (previousCity) {
+                    for(let i = 0; i < citySelect.options.length; i++) {
+                        if (citySelect.options[i].value === previousCity) {
+                            citySelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            });
+    }
+    
+    // Store the initial city value if any
+    if (citySelect.value) {
+        citySelect.setAttribute('data-previous', citySelect.value);
+    }
+    
+    // Update cities when nationality changes
+    nationalitySelect.addEventListener('change', function() {
+        updateCities(this.value);
+    });
+    
+    // Initial update if nationality is already selected
+    if (nationalitySelect.value) {
+        updateCities(nationalitySelect.value);
+    }
+});
 </script>
 {% endblock %}

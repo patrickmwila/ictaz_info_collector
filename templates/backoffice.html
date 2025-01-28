@@ -314,12 +314,10 @@
                                        class="action-icon view-icon" title="View Details">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    {% if member.FirstName %}
                                     <a href="{{ url_for('edit_member', id_number=member.IDNumber) }}" 
-                                       class="action-icon edit-icon" title="Edit Member">
+                                       class="action-icon edit-icon" title="{{ 'Update Member' if member.FirstName else 'Add Member Info' }}">
                                         <i class="fas fa-edit"></i>
                                     </a>
-                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, send_file, send_from_directory
+from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, send_file, send_from_directory, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
@@ -16,6 +16,9 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this to a secure secret key
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///members.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_USE_SIGNER'] = True
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -103,60 +106,164 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def load_valid_ids():
+    """Load valid IDs from idnumbers.json"""
     try:
         with open('idnumbers.json', 'r') as f:
-            return json.load(f)
+            data = json.load(f)
+            return data.get('IDNumbers', [])  # Get the list of IDs from the nested structure
     except FileNotFoundError:
+        print("Warning: idnumbers.json not found")
+        return []
+    except json.JSONDecodeError:
+        print("Warning: idnumbers.json is not valid JSON")
         return []
 
-def validate_id_number(id_number):
-    """Validate ID number against idnumbers.json"""
-    valid_ids = load_valid_ids()
-    return id_number in valid_ids
+def save_to_backoffice(member_data):
+    """Save member data to backoffice CSV file"""
+    try:
+        file_exists = os.path.isfile('backoffice/members.csv')
+        fieldnames = [
+            'IDNumber', 'FirstName', 'MiddleName', 'LastName', 'Gender', 
+            'Email', 'DateofBirth', 'MobileNo', 'IDType', 'Nationality',
+            'MembershipCategory', 'Address', 'City', 'MonthlyDeduction',
+            'IDDocument', 'SubmissionDate'
+        ]
+        
+        # Add submission date to member data
+        member_data['SubmissionDate'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Create backoffice directory if it doesn't exist
+        os.makedirs('backoffice', exist_ok=True)
+        
+        # Write to CSV
+        with open('backoffice/members.csv', mode='a', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            
+            # Write header if file doesn't exist
+            if not file_exists:
+                writer.writeheader()
+            
+            writer.writerow(member_data)
+            
+        print(f"Successfully saved to backoffice: {member_data['IDNumber']}")
+        return True
+    except Exception as e:
+        print(f"Error saving to backoffice: {str(e)}")
+        return False
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = MemberForm()
+    
     if request.method == 'POST':
         id_number = request.form.get('IDNumber', '').strip()
-        if id_number:
-            valid_ids = load_valid_ids()
-            if id_number in valid_ids:
-                return redirect(url_for('edit_member', id_number=id_number))
-            else:
-                flash('Invalid PMEC ID number. Please enter a valid ID.', 'error')
-                return redirect(url_for('index'))
-        else:
+        
+        if not id_number:
             flash('Please enter your PMEC ID number.', 'error')
-            return redirect(url_for('index'))
+            return render_template('index.html', form=form)
+        
+        # Load and check valid IDs
+        valid_ids = load_valid_ids()
+        
+        print(f"Checking ID: {id_number}")  # Debug print
+        print(f"Valid IDs: {valid_ids}")    # Debug print
+        
+        if id_number in valid_ids:
+            print(f"Valid ID found: {id_number}")  # Debug print
+            
+            # Check if member data exists
+            try:
+                with open('members.json', 'r') as f:
+                    members = json.load(f)
+                    if id_number in members:
+                        # Member exists, redirect to view page
+                        flash('Your information has been found in our records.', 'success')
+                        encoded_id = quote(id_number)
+                        return redirect(url_for('view_member', id_number=encoded_id))
+                    else:
+                        # New member, redirect to edit page
+                        flash('Important Notice: You are about to submit your information for the first time.', 'warning')
+                        encoded_id = quote(id_number)
+                        return redirect(url_for('edit_member', id_number=encoded_id))
+            except (FileNotFoundError, json.JSONDecodeError):
+                # No members file, redirect to edit page
+                flash('Important Notice: You are about to submit your information for the first time.', 'warning')
+                encoded_id = quote(id_number)
+                return redirect(url_for('edit_member', id_number=encoded_id))
+        else:
+            print(f"Invalid ID: {id_number}")  # Debug print
+            flash('Access Denied: The provided PMEC ID number was not found in our records.', 'error')
+            return render_template('index.html', form=form)
     
-    # Clear form on GET request
-    form.IDNumber.data = ''
     return render_template('index.html', form=form)
 
-@app.route('/edit_member/<id_number>', methods=['GET', 'POST'])
-def edit_member(id_number):
+@app.route('/view_member/<path:id_number>')
+def view_member(id_number):
     try:
+        # Decode the ID number
+        decoded_id = unquote(id_number)
+        
         # Validate ID number again for security
         valid_ids = load_valid_ids()
-        if id_number not in valid_ids:
-            flash('Invalid PMEC ID number.', 'error')
+        if decoded_id not in valid_ids:
+            flash('Access Denied: Invalid PMEC ID number.', 'error')
             return redirect(url_for('index'))
 
-        # Load existing member data if any
+        # Load member data
         try:
             with open('members.json', 'r') as f:
                 members = json.load(f)
+                if decoded_id in members:
+                    member = members[decoded_id]
+                    return render_template('view_member.html', member=member)
+                else:
+                    flash('Member information not found.', 'error')
+                    return redirect(url_for('index'))
         except (FileNotFoundError, json.JSONDecodeError):
-            members = {}
+            flash('Member information not found.', 'error')
+            return redirect(url_for('index'))
+            
+    except Exception as e:
+        print(f"Error in view_member: {str(e)}")  # Debug print
+        flash(f'An error occurred: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/edit_member/<path:id_number>', methods=['GET', 'POST'])
+def edit_member(id_number):
+    try:
+        # Decode the ID number
+        decoded_id = unquote(id_number)
+        
+        # Validate ID number again for security
+        valid_ids = load_valid_ids()
+        if decoded_id not in valid_ids:
+            flash('Access Denied: Invalid PMEC ID number.', 'error')
+            return redirect(url_for('index'))
 
         form = MemberForm()
         
+        # Make ID field read-only
+        form.IDNumber.render_kw = {'readonly': True}
+        
+        # Load existing member data if available
+        try:
+            with open('members.json', 'r') as f:
+                members = json.load(f)
+                existing_data = members.get(decoded_id, {})
+        except (FileNotFoundError, json.JSONDecodeError):
+            members = {}
+            existing_data = {}
+        
         if request.method == 'POST':
+            # Update city choices based on selected nationality
+            selected_nationality = request.form.get('Nationality')
+            if selected_nationality:
+                form.update_cities(selected_nationality)
+            
             if form.validate_on_submit():
                 # Process form data and save
                 member_data = {
-                    'IDNumber': id_number,
+                    'IDNumber': decoded_id,
                     'FirstName': form.FirstName.data,
                     'MiddleName': form.MiddleName.data,
                     'LastName': form.LastName.data,
@@ -176,33 +283,58 @@ def edit_member(id_number):
                 if form.IDDocument.data:
                     file = form.IDDocument.data
                     if file and allowed_file(file.filename):
-                        filename = secure_filename(f"{id_number}_{file.filename}")
+                        filename = secure_filename(f"{decoded_id}_{file.filename}")
                         file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
                         member_data['IDDocument'] = filename
+                elif existing_data.get('IDDocument'):
+                    # Keep existing document if no new one uploaded
+                    member_data['IDDocument'] = existing_data['IDDocument']
 
                 # Save to members.json
-                members[id_number] = member_data
+                members[decoded_id] = member_data
                 with open('members.json', 'w') as f:
                     json.dump(members, f, indent=4)
 
-                flash('Your information has been saved successfully!', 'success')
-                return redirect(url_for('index'))
+                # Save to backoffice
+                if save_to_backoffice(member_data):
+                    flash('Member information has been updated successfully!', 'success')
+                else:
+                    flash('Member information was saved but there was an issue updating the backoffice. Please contact support.', 'warning')
+                
+                return redirect(url_for('view_member', id_number=quote(decoded_id)))
             else:
                 for field, errors in form.errors.items():
                     for error in errors:
                         flash(f'{error}', 'error')
 
         # For GET request, populate form with existing data
-        if id_number in members:
-            member = members[id_number]
+        if existing_data:
             for field in form._fields:
-                if field in member:
-                    getattr(form, field).data = member[field]
+                if field in existing_data:
+                    form._fields[field].data = existing_data[field]
+        
+        # Set the ID Number
+        form.IDNumber.data = decoded_id
+        
+        # Initialize city choices based on nationality
+        if form.Nationality.data:
+            form.update_cities(form.Nationality.data)
+        else:
+            form.City.choices = [('', 'Select City')]
 
-        return render_template('edit.html', form=form, id_number=id_number)
+        return render_template('edit.html', form=form, existing_data=existing_data)
     except Exception as e:
+        print(f"Error in edit_member: {str(e)}")  # Debug print
         flash(f'An error occurred: {str(e)}', 'error')
         return redirect(url_for('index'))
+
+@app.route('/update_cities/<nationality>')
+def update_cities(nationality):
+    """AJAX endpoint to get cities for a nationality"""
+    if nationality in COUNTRY_DATA:
+        cities = COUNTRY_DATA[nationality]['cities']
+        return jsonify({'cities': cities})
+    return jsonify({'cities': []})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -233,66 +365,145 @@ def logout():
 def backoffice():
     filter_type = request.args.get('filter', 'all')
     
-    # Get counts for each category
-    all_members = Member.query.all()
-    updated_members = Member.query.filter(Member.FirstName.isnot(None)).all()
-    not_updated_members = Member.query.filter(Member.FirstName.is_(None)).all()
-    
-    all_count = len(all_members)
-    updated_count = len(updated_members)
-    not_updated_count = len(not_updated_members)
-    
-    # Filter members based on selection
-    if filter_type == 'updated':
-        members = updated_members
-    elif filter_type == 'not_updated':
-        members = not_updated_members
-    else:
-        members = all_members
-    
-    return render_template('backoffice.html', 
-                         members=members,
-                         current_filter=filter_type,
-                         all_count=all_count,
-                         updated_count=updated_count,
-                         not_updated_count=not_updated_count)
+    try:
+        # Load valid IDs from idnumbers.json
+        valid_ids = load_valid_ids()
+        
+        # Load submitted member data from members.json
+        try:
+            with open('members.json', 'r') as f:
+                submitted_members = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            submitted_members = {}
+        
+        # Create a list of all members with their update status
+        all_members = []
+        for id_number in valid_ids:
+            member = submitted_members.get(id_number, {'IDNumber': id_number})
+            all_members.append(member)
+        
+        # Filter members based on selection
+        if filter_type == 'updated':
+            members = [m for m in all_members if m.get('FirstName')]
+        elif filter_type == 'not_updated':
+            members = [m for m in all_members if not m.get('FirstName')]
+        else:
+            members = all_members
+        
+        # Get counts
+        all_count = len(all_members)
+        updated_count = len([m for m in all_members if m.get('FirstName')])
+        not_updated_count = len([m for m in all_members if not m.get('FirstName')])
+        
+        return render_template('backoffice.html', 
+                            members=members,
+                            current_filter=filter_type,
+                            all_count=all_count,
+                            updated_count=updated_count,
+                            not_updated_count=not_updated_count)
+                            
+    except Exception as e:
+        print(f"Error in backoffice: {str(e)}")
+        flash('Error loading member data', 'error')
+        return render_template('backoffice.html', 
+                            members=[],
+                            current_filter='all',
+                            all_count=0,
+                            updated_count=0,
+                            not_updated_count=0)
 
-@app.route('/export')
+@app.route('/view_member_details/<path:id_number>')
+@login_required
+def view_member_details(id_number):
+    try:
+        # Load member data
+        with open('members.json', 'r') as f:
+            members = json.load(f)
+            if id_number in members:
+                member = members[id_number]
+                return render_template('view_member.html', member=member)
+            else:
+                flash('Member has not submitted their information yet.', 'warning')
+                return redirect(url_for('backoffice'))
+    except Exception as e:
+        flash('Error loading member details', 'error')
+        return redirect(url_for('backoffice'))
+
+@app.route('/view_document/<path:id_number>')
+@login_required
+def view_document(id_number):
+    try:
+        with open('members.json', 'r') as f:
+            members = json.load(f)
+            if id_number in members and members[id_number].get('IDDocument'):
+                filename = members[id_number]['IDDocument']
+                return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+            else:
+                flash('Document not found', 'error')
+                return redirect(url_for('backoffice'))
+    except Exception as e:
+        flash('Error accessing document', 'error')
+        return redirect(url_for('backoffice'))
+
+@app.route('/export_csv')
 @login_required
 def export_csv():
     try:
-        si = io.StringIO()
-        cw = csv.writer(si)
+        # Load valid IDs from idnumbers.json
+        valid_ids = load_valid_ids()
         
-        # Write headers
-        headers = ['FirstName', 'MiddleName', 'LastName', 'Gender', 'Email', 
-                  'DateofBirth', 'MobileNo', 'IDNumber', 'IDType', 'Nationality', 
-                  'MembershipCategory', 'Address', 'CountryCode', 'City', 'MonthlyDeduction']
-        cw.writerow(headers)
+        # Load submitted member data from members.json
+        try:
+            with open('members.json', 'r') as f:
+                members = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            members = {}
         
-        # Write data
-        members = Member.query.all()
-        for member in members:
-            cw.writerow([
-                member.FirstName, member.MiddleName, member.LastName,
-                member.Gender, member.Email, member.DateofBirth,
-                member.MobileNo, member.IDNumber, member.IDType,
-                member.Nationality, member.MembershipCategory,
-                member.Address, member.CountryCode, member.City, member.MonthlyDeduction
+        # Create CSV in memory
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow(['ID Number', 'First Name', 'Middle Name', 'Last Name', 'Gender', 
+                        'Email', 'Date of Birth', 'Mobile No', 'ID Type', 'Nationality',
+                        'Membership Category', 'Address', 'City', 'Monthly Deduction',
+                        'ID Document', 'Status'])
+        
+        # Write member data for all valid IDs
+        for id_number in valid_ids:
+            data = members.get(id_number, {})
+            writer.writerow([
+                id_number,
+                data.get('FirstName', ''),
+                data.get('MiddleName', ''),
+                data.get('LastName', ''),
+                data.get('Gender', ''),
+                data.get('Email', ''),
+                data.get('DateofBirth', ''),
+                data.get('MobileNo', ''),
+                data.get('IDType', ''),
+                data.get('Nationality', ''),
+                data.get('MembershipCategory', ''),
+                data.get('Address', ''),
+                data.get('City', ''),
+                data.get('MonthlyDeduction', ''),
+                data.get('IDDocument', ''),
+                'Updated' if data.get('FirstName') else 'Not Updated'
             ])
         
-        output = si.getvalue()
-        si.close()
-        
+        # Prepare response
+        output.seek(0)
         return send_file(
-            io.BytesIO(output.encode('utf-8')),
+            io.BytesIO(output.getvalue().encode('utf-8')),
             mimetype='text/csv',
             as_attachment=True,
-            download_name='members.csv'
+            download_name=f'members_export_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
         )
+        
     except Exception as e:
-        flash('An error occurred while exporting the data. Please try again.', 'error')
-        return redirect(url_for('index'))
+        print(f"Error in export_csv: {str(e)}")  # Debug print
+        flash('Error exporting data', 'error')
+        return redirect(url_for('backoffice'))
 
 @app.route('/get_cities/<country>')
 def get_cities(country):
@@ -305,44 +516,6 @@ def get_country_code(country):
     """Get country code for a given country"""
     code = COUNTRY_DATA.get(country, {}).get('code', '')
     return jsonify(code)
-
-@app.route('/view_member_details/<path:id_number>')
-@login_required
-def view_member_details(id_number):
-    """View member details from backoffice"""
-    decoded_id = unquote(id_number)
-    member = Member.query.filter_by(IDNumber=decoded_id).first()
-    
-    if not member:
-        flash('Member not found.', 'error')
-        return redirect(url_for('backoffice'))
-        
-    return render_template('details.html', member=member, is_admin=True)
-
-@app.route('/view_document/<path:id_number>')
-@login_required
-def view_document(id_number):
-    """View uploaded ID document"""
-    try:
-        decoded_id = unquote(id_number)
-        member = Member.query.filter_by(IDNumber=decoded_id).first()
-        
-        if not member or not member.IDDocument:
-            return jsonify({'error': 'Document not found'}), 404
-            
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], member.IDDocument)
-        if not os.path.exists(file_path):
-            return jsonify({'error': 'Document file not found'}), 404
-            
-        return send_file(
-            file_path,
-            mimetype='application/pdf',
-            as_attachment=False,
-            download_name=f'document_{member.IDNumber}.pdf'
-        )
-    except Exception as e:
-        print(f"Error serving file: {str(e)}")
-        return jsonify({'error': 'Error accessing document'}), 500
 
 # Make sure init_db() is called when the app starts
 with app.app_context():

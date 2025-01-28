@@ -156,7 +156,8 @@ class MemberForm(FlaskForm):
         FileAllowed(['pdf'], 'Only PDF files are allowed!')
     ])
     
-    Nationality = SelectField('Nationality', choices=[('', 'Select Country')] + [(country, country) for country in COUNTRY_DATA.keys()], validators=[DataRequired(message='Please select your nationality')])
+    Nationality = SelectField('Nationality', choices=[('', 'Select Country')] + [(country, country) for country in COUNTRY_DATA.keys()], 
+                            validators=[DataRequired(message='Please select your nationality')])
     
     MembershipCategory = SelectField('Membership Category',
                                    choices=[('', 'Select Category'),
@@ -177,6 +178,15 @@ class MemberForm(FlaskForm):
         DataRequired(message='Monthly deduction is required'),
         NumberRange(min=0, message='Monthly deduction must be a positive number')
     ])
+
+    def __init__(self, *args, **kwargs):
+        super(MemberForm, self).__init__(*args, **kwargs)
+        self.original_nationality = None
+
+    def update_cities(self, nationality):
+        """Update city choices based on nationality"""
+        if nationality in COUNTRY_DATA:
+            self.City.choices = [('', 'Select City')] + [(city, city) for city in COUNTRY_DATA[nationality]['cities']]
 
     def validate_MobileNo(self, field):
         if self.Nationality.data == 'Zambian':
