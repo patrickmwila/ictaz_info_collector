@@ -60,6 +60,7 @@
 
     .sub-heading {
         font-size: 1.2rem;
+        font-style: italic;
         text-align: center;
         max-width: 800px;
         margin: 0 auto;
@@ -242,13 +243,13 @@
                         MEMBER VERIFICATION
                     </h2>
                     <p class="section-text">
-                        Proceed to verify your personal details. Enter your PMEC ID number below to begin the verification process.
+                        Proceed to verify your personal details. Enter your ID number below to begin the verification process.
                     </p>
                     <form id="verificationForm" method="POST" class="mb-3">
                         {{ form.csrf_token }}
                         <div class="form-group mb-4">
                             {{ form.IDNumber.label(class="form-label fw-bold") }}
-                            {{ form.IDNumber(class="form-control", placeholder="Enter your PMEC ID number", autocomplete="off") }}
+                            {{ form.IDNumber(class="form-control", placeholder="Enter your ID number", autocomplete="off") }}
                             {% if form.IDNumber.errors %}
                                 <div class="alert alert-danger mt-2">
                                     <i class="fas fa-exclamation-circle me-2"></i>

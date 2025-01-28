@@ -148,9 +148,9 @@ class MemberForm(FlaskForm):
         validate_date
     ])
     MobileNo = StringField('Mobile Number', validators=[DataRequired()])
-    IDNumber = StringField('PMEC ID Number', validators=[
+    IDNumber = StringField('ID Number', validators=[
         DataRequired(),
-        Regexp(r'^\d{6}/\d{2}/\d{1}$', message='Invalid PMEC ID Number format. Expected format: XXXXXX/XX/X')
+        Regexp(r'^\d{6}/\d{2}/\d{1}$', message='Invalid ID Number format. Expected format: XXXXXX/XX/X')
     ])
     IDType = SelectField('ID Type', choices=[('', 'Select ID Type'), ('NRC', 'NRC'), ('Passport', 'Passport')], validators=[DataRequired()])
     IDDocument = FileField('ID Document', validators=[
@@ -195,7 +195,7 @@ class MemberForm(FlaskForm):
     def validate_MobileNo(self, field):
         if self.Nationality.data == 'Zambian':
             if not field.data.startswith('260'):
-                raise ValidationError('For Zambian numbers, mobile number must start with 260 (Zambia country code)')
+                raise ValidationError('Mobile number must start with 260')
         if not field.data.isdigit():
             raise ValidationError('Mobile number must contain only digits')
         if len(field.data) != 12:

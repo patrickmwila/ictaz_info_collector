@@ -45,7 +45,7 @@ class User(UserMixin, db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
 
 class Member(db.Model):
     __tablename__ = 'Members'
@@ -209,7 +209,7 @@ def index():
             return jsonify({
                 'status': 'error',
                 'title': 'Access Denied',
-                'message': 'The provided PMEC ID number was not found in our records.',
+                'message': 'The provided ID number was not found in our records.',
                 'icon': 'error'
             }), 400
     
