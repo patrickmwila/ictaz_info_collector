@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, SelectField, FloatField, PasswordField, SubmitField
-from wtforms.validators import DataRequired, Email, ValidationError, Regexp, Optional, NumberRange
+from wtforms.validators import DataRequired, Email, ValidationError, Regexp, Optional, NumberRange, Length
 from datetime import datetime
 
 # Comprehensive country data with codes and cities
@@ -126,7 +126,8 @@ def validate_date(form, field):
 class MemberForm(FlaskForm):
     FirstName = StringField('First Name', validators=[
         DataRequired(message='First Name is required'),
-        Regexp('^[A-Za-z]+$', message='First Name must contain only letters')
+        Regexp('^[A-Za-z]+$', message='First Name must contain only letters'),
+        Length(min=2, max=50, message='First name must be between 2 and 50 characters')
     ])
     MiddleName = StringField('Middle Name', validators=[
         Optional(),
@@ -148,11 +149,12 @@ class MemberForm(FlaskForm):
     ])
     MobileNo = StringField('Mobile Number', validators=[DataRequired()])
     IDNumber = StringField('PMEC ID Number', validators=[
-        DataRequired(message="Please enter your PMEC ID Number")
+        DataRequired(),
+        Regexp(r'^\d{6}/\d{2}/\d{1}$', message='Invalid PMEC ID Number format. Expected format: XXXXXX/XX/X')
     ])
     IDType = SelectField('ID Type', choices=[('', 'Select ID Type'), ('NRC', 'NRC'), ('Passport', 'Passport')], validators=[DataRequired()])
     IDDocument = FileField('ID Document', validators=[
-        DataRequired(message='Please upload your ID document'),
+        Optional(),  
         FileAllowed(['pdf'], 'Only PDF files are allowed!')
     ])
     
@@ -173,7 +175,9 @@ class MemberForm(FlaskForm):
         DataRequired(message='Address is required')
     ])
     CountryCode = StringField('Country Code', render_kw={'readonly': True})
-    City = SelectField('City', choices=[('', 'Select City')], validators=[DataRequired(message='City is required')])
+    City = SelectField('City', 
+                      choices=[('', 'Select City')], 
+                      validators=[DataRequired(message='Please select a city')])
     MonthlyDeduction = FloatField('Monthly Deduction', validators=[
         DataRequired(message='Monthly deduction is required'),
         NumberRange(min=0, message='Monthly deduction must be a positive number')
@@ -196,6 +200,12 @@ class MemberForm(FlaskForm):
             raise ValidationError('Mobile number must contain only digits')
         if len(field.data) != 12:
             raise ValidationError('Mobile number must be 12 digits long (including country code)')
+
+    def validate_City(self, field):
+        if self.Nationality.data in COUNTRY_DATA:
+            valid_cities = COUNTRY_DATA[self.Nationality.data]['cities']
+            if field.data not in valid_cities:
+                raise ValidationError('Please select a valid city for the selected nationality')
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired()])

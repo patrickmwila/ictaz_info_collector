@@ -322,86 +322,109 @@
 
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <script>
-        // Function to show SweetAlert2 message
-        function showAlert(title, message, icon, autoClose = false) {
-            Swal.fire({
+        // Global function to show SweetAlert2 message
+        function showAlert(title, message, icon = 'info', autoClose = false) {
+            const options = {
                 title: title,
                 text: message,
                 icon: icon,
-                confirmButtonColor: '#0056b3',
-                timer: autoClose ? 3000 : undefined,
-                timerProgressBar: autoClose
+                confirmButtonText: 'OK',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                }
+            };
+            
+            if (autoClose) {
+                options.timer = 1500;
+                options.showConfirmButton = false;
+            }
+            
+            return Swal.fire(options);
+        }
+
+        // Global function to show loading state
+        function showLoading(message = 'Please wait...') {
+            Swal.fire({
+                title: 'Loading',
+                text: message,
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+        }
+
+        // Global function to close loading state
+        function hideLoading() {
+            Swal.close();
+        }
+
+        // Global function to show confirmation dialog
+        function confirmDialog(title, text, icon = 'warning') {
+            return Swal.fire({
+                title: title,
+                text: text,
+                icon: icon,
+                showCancelButton: true,
+                confirmButtonText: 'Yes',
+                cancelButtonText: 'No',
+                reverseButtons: true,
+                customClass: {
+                    confirmButton: 'btn btn-success',
+                    cancelButton: 'btn btn-danger'
+                }
             });
         }
 
         // Handle flash messages with SweetAlert2
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    showAlert(
-                        '{{ category|title }}',
-                        '{{ message }}',
-                        '{{ "success" if category == "success" else ("info" if category == "info" else ("warning" if category == "warning" else "error")) }}',
-                        {{ "true" if category == "success" else "false" }}
-                    );
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        document.addEventListener('DOMContentLoaded', function() {
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        showAlert(
+                            '{{ category|title }}',
+                            '{{ message }}',
+                            '{{ "success" if category == "success" else "error" if category == "error" else "warning" }}',
+                            {{ "true" if category == "success" else "false" }}
+                        );
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        });
 
         // Function to show confirmation dialog before form submission
         function confirmSubmit(formId) {
-            Swal.fire({
-                title: 'Important Notice',
-                html: '<div class="text-left">' +
-                      '<p>Please ensure all information is correct as:</p>' +
-                      '<ul>' +
-                      '<li>You will not be able to edit the data after submission</li>' +
-                      '<li>Changes can only be made by contacting support</li>' +
-                      '<li>All fields marked with * are required</li>' +
-                      '</ul>' +
-                      '</div>',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#0056b3',
-                cancelButtonColor: '#dc3545',
-                confirmButtonText: 'Yes, submit',
-                cancelButtonText: 'Review data',
-                reverseButtons: true,
-                allowEscapeKey: false,
-                allowOutsideClick: false
-            }).then((result) => {
+            return confirmDialog(
+                'Confirm Submission',
+                'Are you sure you want to submit this form? Please review your information carefully.',
+                'question'
+            ).then((result) => {
                 if (result.isConfirmed) {
                     document.getElementById(formId).submit();
                 }
+                return false;
             });
-            return false;
         }
 
         // Function to preview document
         function previewDocument(url, title) {
             Swal.fire({
-                title: title,
+                title: title || 'Document Preview',
                 html: `<iframe src="${url}" width="100%" height="500px" frameborder="0"></iframe>`,
                 width: '80%',
-                confirmButtonColor: '#0056b3',
-                showCloseButton: true,
-                showConfirmButton: false,
-                heightAuto: false
-            });
-        }
-
-        // Add required indicator to form labels
-        document.addEventListener('DOMContentLoaded', function() {
-            document.querySelectorAll('input[required], select[required]').forEach(function(element) {
-                let label = element.previousElementSibling;
-                if (label && label.classList.contains('form-label')) {
-                    label.classList.add('required');
+                confirmButtonText: 'Close',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
                 }
             });
-        });
+        }
     </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>

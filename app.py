@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, send_file, send_from_directory, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
@@ -12,6 +12,11 @@ from functools import wraps
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
 
+# Create upload folder if it doesn't exist
+UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this to a secure secret key
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///members.db'
@@ -19,6 +24,8 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['SESSION_PERMANENT'] = False
 app.config['SESSION_USE_SIGNER'] = True
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 db = SQLAlchemy(app)
 login_manager = LoginManager()
@@ -91,14 +98,6 @@ def init_db():
         except Exception as e:
             print(f"Error reading idnumbers.json: {str(e)}")
 
-# Create upload folder if it doesn't exist
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-
 # Configure allowed extensions
 ALLOWED_EXTENSIONS = {'pdf'}
 
@@ -159,12 +158,15 @@ def index():
         id_number = request.form.get('IDNumber', '').strip()
         
         if not id_number:
-            flash('Please enter your PMEC ID number.', 'error')
-            return render_template('index.html', form=form)
+            return jsonify({
+                'status': 'error',
+                'title': 'Error',
+                'message': 'Please enter your PMEC ID number.',
+                'icon': 'error'
+            }), 400
         
         # Load and check valid IDs
         valid_ids = load_valid_ids()
-        
         print(f"Checking ID: {id_number}")  # Debug print
         print(f"Valid IDs: {valid_ids}")    # Debug print
         
@@ -176,24 +178,40 @@ def index():
                 with open('members.json', 'r') as f:
                     members = json.load(f)
                     if id_number in members:
-                        # Member exists, redirect to view page
-                        flash('Your information has been found in our records.', 'success')
-                        encoded_id = quote(id_number)
-                        return redirect(url_for('view_member', id_number=encoded_id))
+                        # Member exists, return success with view redirect
+                        return jsonify({
+                            'status': 'success',
+                            'title': 'Success',
+                            'message': 'Your information has been found in our records.',
+                            'icon': 'success',
+                            'redirect': url_for('view_member', id_number=quote(id_number))
+                        })
                     else:
-                        # New member, redirect to edit page
-                        flash('Important Notice: You are about to submit your information for the first time.', 'warning')
-                        encoded_id = quote(id_number)
-                        return redirect(url_for('edit_member', id_number=encoded_id))
+                        # New member, return success with edit redirect
+                        return jsonify({
+                            'status': 'success',
+                            'title': 'Success',
+                            'message': 'Important Notice: You are about to submit your information for the first time.',
+                            'icon': 'info',
+                            'redirect': url_for('edit_member', id_number=quote(id_number))
+                        })
             except (FileNotFoundError, json.JSONDecodeError):
-                # No members file, redirect to edit page
-                flash('Important Notice: You are about to submit your information for the first time.', 'warning')
-                encoded_id = quote(id_number)
-                return redirect(url_for('edit_member', id_number=encoded_id))
+                # No members file, return success with edit redirect
+                return jsonify({
+                    'status': 'success',
+                    'title': 'Success',
+                    'message': 'Important Notice: You are about to submit your information for the first time.',
+                    'icon': 'info',
+                    'redirect': url_for('edit_member', id_number=quote(id_number))
+                })
         else:
             print(f"Invalid ID: {id_number}")  # Debug print
-            flash('Access Denied: The provided PMEC ID number was not found in our records.', 'error')
-            return render_template('index.html', form=form)
+            return jsonify({
+                'status': 'error',
+                'title': 'Access Denied',
+                'message': 'The provided PMEC ID number was not found in our records.',
+                'icon': 'error'
+            }), 400
     
     return render_template('index.html', form=form)
 
@@ -231,39 +249,57 @@ def view_member(id_number):
 @app.route('/edit_member/<path:id_number>', methods=['GET', 'POST'])
 def edit_member(id_number):
     try:
-        # Decode the ID number
         decoded_id = unquote(id_number)
+        
+        # Create member-specific upload directory
+        member_dir_name = decoded_id.replace('/', '_')
+        member_upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], member_dir_name)
+        if not os.path.exists(member_upload_dir):
+            os.makedirs(member_upload_dir)
         
         # Validate ID number again for security
         valid_ids = load_valid_ids()
         if decoded_id not in valid_ids:
-            flash('Access Denied: Invalid PMEC ID number.', 'error')
-            return redirect(url_for('index'))
+            return jsonify({
+                'status': 'error',
+                'title': 'Access Denied',
+                'message': 'The provided PMEC ID number was not found in our records.',
+                'icon': 'error'
+            }), 400
 
         form = MemberForm()
         
-        # Make ID field read-only
+        # Set IDNumber field as readonly and populate it
         form.IDNumber.render_kw = {'readonly': True}
+        form.IDNumber.data = decoded_id
         
-        # Load existing member data if available
+        # Load existing data if available
+        existing_data = None
         try:
             with open('members.json', 'r') as f:
                 members = json.load(f)
-                existing_data = members.get(decoded_id, {})
+                if decoded_id in members:
+                    existing_data = members[decoded_id]
         except (FileNotFoundError, json.JSONDecodeError):
-            members = {}
-            existing_data = {}
-        
+            pass
+
         if request.method == 'POST':
-            # Update city choices based on selected nationality
-            selected_nationality = request.form.get('Nationality')
-            if selected_nationality:
-                form.update_cities(selected_nationality)
+            # Update city choices based on selected nationality before validation
+            if form.Nationality.data in COUNTRY_DATA:
+                form.City.choices = [('', 'Select City')] + [(city, city) for city in COUNTRY_DATA[form.Nationality.data]['cities']]
             
-            if form.validate_on_submit():
-                # Process form data and save
+            if form.validate():
+                # Save uploaded document if provided
+                id_document = None
+                if form.IDDocument.data:
+                    filename = secure_filename(form.IDDocument.data.filename)
+                    extension = os.path.splitext(filename)[1]
+                    new_filename = f"{member_dir_name}{extension}"
+                    form.IDDocument.data.save(os.path.join(member_upload_dir, new_filename))
+                    id_document = f"{member_dir_name}/{new_filename}"
+
+                # Prepare member data for local storage
                 member_data = {
-                    'IDNumber': decoded_id,
                     'FirstName': form.FirstName.data,
                     'MiddleName': form.MiddleName.data,
                     'LastName': form.LastName.data,
@@ -271,62 +307,83 @@ def edit_member(id_number):
                     'Email': form.Email.data,
                     'DateofBirth': form.DateofBirth.data,
                     'MobileNo': form.MobileNo.data,
+                    'IDNumber': decoded_id,
                     'IDType': form.IDType.data,
                     'Nationality': form.Nationality.data,
                     'MembershipCategory': form.MembershipCategory.data,
-                    'Address': form.Address.data,
                     'City': form.City.data,
-                    'MonthlyDeduction': form.MonthlyDeduction.data
+                    'Address': form.Address.data,
+                    'MonthlyDeduction': form.MonthlyDeduction.data,
+                    'UpdatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 }
 
-                # Handle file upload
-                if form.IDDocument.data:
-                    file = form.IDDocument.data
-                    if file and allowed_file(file.filename):
-                        filename = secure_filename(f"{decoded_id}_{file.filename}")
-                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-                        member_data['IDDocument'] = filename
-                elif existing_data.get('IDDocument'):
-                    # Keep existing document if no new one uploaded
-                    member_data['IDDocument'] = existing_data['IDDocument']
+                if id_document:
+                    member_data['IDDocument'] = id_document
 
                 # Save to members.json
+                try:
+                    with open('members.json', 'r') as f:
+                        members = json.load(f)
+                except (FileNotFoundError, json.JSONDecodeError):
+                    members = {}
+                
                 members[decoded_id] = member_data
+                
                 with open('members.json', 'w') as f:
-                    json.dump(members, f, indent=4)
+                    json.dump(members, f, indent=2)
+
+                # Prepare data for backoffice (without UpdatedAt)
+                backoffice_data = member_data.copy()
+                del backoffice_data['UpdatedAt']
 
                 # Save to backoffice
-                if save_to_backoffice(member_data):
-                    flash('Member information has been updated successfully!', 'success')
+                if save_to_backoffice(backoffice_data):
+                    return jsonify({
+                        'status': 'success',
+                        'title': 'Success',
+                        'message': 'Your information has been submitted successfully!',
+                        'icon': 'success',
+                        'redirect': url_for('view_member', id_number=quote(decoded_id))
+                    })
                 else:
-                    flash('Member information was saved but there was an issue updating the backoffice. Please contact support.', 'warning')
-                
-                return redirect(url_for('view_member', id_number=quote(decoded_id)))
+                    return jsonify({
+                        'status': 'warning',
+                        'title': 'Partial Success',
+                        'message': 'Your information was saved but there was an issue updating the backoffice. Please contact support.',
+                        'icon': 'warning',
+                        'redirect': url_for('view_member', id_number=quote(decoded_id))
+                    })
             else:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        flash(f'{error}', 'error')
+                # Form validation failed
+                errors = []
+                for field, field_errors in form.errors.items():
+                    errors.extend(field_errors)
+                return jsonify({
+                    'status': 'error',
+                    'title': 'Validation Error',
+                    'message': '\n'.join(errors),
+                    'icon': 'error'
+                }), 400
 
         # For GET request, populate form with existing data
         if existing_data:
             for field in form._fields:
-                if field in existing_data:
-                    form._fields[field].data = existing_data[field]
-        
-        # Set the ID Number
-        form.IDNumber.data = decoded_id
-        
-        # Initialize city choices based on nationality
-        if form.Nationality.data:
-            form.update_cities(form.Nationality.data)
-        else:
-            form.City.choices = [('', 'Select City')]
+                if field in existing_data and field != 'IDNumber':  # Skip IDNumber as we set it above
+                    getattr(form, field).data = existing_data[field]
+            
+            # Update city choices for existing data
+            if existing_data.get('Nationality') in COUNTRY_DATA:
+                form.City.choices = [('', 'Select City')] + [(city, city) for city in COUNTRY_DATA[existing_data['Nationality']]['cities']]
 
         return render_template('edit.html', form=form, existing_data=existing_data)
     except Exception as e:
         print(f"Error in edit_member: {str(e)}")  # Debug print
-        flash(f'An error occurred: {str(e)}', 'error')
-        return redirect(url_for('index'))
+        return jsonify({
+            'status': 'error',
+            'title': 'Error',
+            'message': str(e),
+            'icon': 'error'
+        }), 500
 
 @app.route('/update_cities/<nationality>')
 def update_cities(nationality):
@@ -444,6 +501,12 @@ def view_document(id_number):
     except Exception as e:
         flash('Error accessing document', 'error')
         return redirect(url_for('backoffice'))
+
+@app.route('/static/uploads/<path:filename>')
+def uploaded_file(filename):
+    # Split the filename into directory and actual filename
+    member_dir, file = os.path.split(filename)
+    return send_from_directory(os.path.join(app.config['UPLOAD_FOLDER'], member_dir), file)
 
 @app.route('/export_csv')
 @login_required

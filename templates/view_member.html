@@ -92,7 +92,7 @@
                                     <th class="bg-light">ID Document</th>
                                     <td>
                                         {% if member.IDDocument %}
-                                            <a href="{{ url_for('static', filename='uploads/' + member.IDDocument) }}" target="_blank" class="btn btn-sm btn-primary">
+                                            <a href="{{ url_for('uploaded_file', filename=member.IDDocument) }}" target="_blank" class="btn btn-sm btn-primary">
                                                 <i class="fas fa-file-pdf me-2"></i>View Document
                                             </a>
                                         {% else %}

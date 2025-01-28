@@ -20,7 +20,7 @@
                     <h2 class="text-center mb-0">KYC Verification</h2>
                 </div>
                 <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data" id="memberForm" onsubmit="return confirmSubmit('memberForm')">
+                    <form method="POST" enctype="multipart/form-data" id="memberForm">
                         {{ form.csrf_token }}
                         
                         <div class="required-legend mb-4">
@@ -102,7 +102,11 @@
                                             {{ form.IDNumber.label(class="form-label") }}
                                             {{ form.IDNumber(class="form-control", readonly=true) }}
                                             {% if form.IDNumber.errors %}
-                                                <div class="alert alert-danger">{{ form.IDNumber.errors[0] }}</div>
+                                                <div class="alert alert-danger mt-2">
+                                                    {% for error in form.IDNumber.errors %}
+                                                        <div>{{ error }}</div>
+                                                    {% endfor %}
+                                                </div>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -246,11 +250,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const country = this.value;
         
         // Update cities
-        fetch(`/get_cities/${country}`)
+        fetch(`/update_cities/${country}`)
             .then(response => response.json())
-            .then(cities => {
+            .then(data => {
                 citySelect.innerHTML = '<option value="">Select City</option>';
-                cities.forEach(city => {
+                data.cities.forEach(city => {
                     citySelect.innerHTML += `<option value="${city}">${city}</option>`;
                 });
             });
@@ -297,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        fetch(`/update_cities/${nationality}`)
+        fetch(`/api/update_cities/${nationality}`)
             .then(response => response.json())
             .then(data => {
                 citySelect.innerHTML = '<option value="">Select City</option>';
@@ -333,6 +337,207 @@ document.addEventListener('DOMContentLoaded', function() {
     if (nationalitySelect.value) {
         updateCities(nationalitySelect.value);
     }
+});
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('memberForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Show confirmation dialog
+    const result = await Swal.fire({
+        title: 'Important Notice',
+        html: `
+            <div class="text-start">
+                <p class="mb-3">You are about to submit your information to PMEC. Please note:</p>
+                <ul class="text-start mb-4" style="list-style-type: none; padding-left: 0;">
+                    <li class="mb-2">
+                        <i class="fas fa-exclamation-circle text-warning me-2"></i>
+                        Once submitted, you <strong>cannot edit</strong> this information directly
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-info-circle text-info me-2"></i>
+                        To make changes after submission, please contact PMEC support at:
+                        <br>
+                        <span class="ms-4">
+                            <i class="fas fa-envelope me-1"></i> support@pmec.org.zm
+                        </span>
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        Please verify that all information is correct
+                    </li>
+                    <li>
+                        <i class="fas fa-asterisk text-danger me-2"></i>
+                        All fields marked with * are required
+                    </li>
+                </ul>
+                <div class="alert alert-warning">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Are you sure you want to proceed with the submission?
+                </div>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, submit my information',
+        cancelButtonText: 'No, I need to review',
+        reverseButtons: true,
+        customClass: {
+            confirmButton: 'btn btn-success',
+            cancelButton: 'btn btn-danger',
+            htmlContainer: 'text-start'
+        }
+    });
+    
+    if (!result.isConfirmed) {
+        return;
+    }
+    
+    // Show loading state
+    showLoading('Submitting your information...');
+    
+    try {
+        // Get the form data including files
+        const formData = new FormData(this);
+        
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+        
+        let data;
+        try {
+            data = await response.json();
+        } catch (error) {
+            console.error('Error parsing JSON:', error);
+            throw new Error('Invalid server response');
+        }
+        
+        hideLoading();
+        
+        if (response.ok) {
+            // Show success message and redirect
+            await Swal.fire({
+                title: data.title || 'Success',
+                text: data.message,
+                icon: data.icon || 'success',
+                confirmButtonText: 'OK',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+            
+            if (data.redirect) {
+                window.location.href = data.redirect;
+            }
+        } else {
+            // Show error message
+            Swal.fire({
+                title: data.title || 'Error',
+                text: data.message || 'An error occurred while submitting the form.',
+                icon: data.icon || 'error',
+                confirmButtonText: 'OK',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+        }
+    } catch (error) {
+        console.error('Submission error:', error);
+        hideLoading();
+        Swal.fire({
+            title: 'Error',
+            text: 'An unexpected error occurred while submitting the form. Please try again.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            customClass: {
+                confirmButton: 'btn btn-primary'
+            }
+        });
+    }
+});
+
+// Handle city updates
+document.getElementById('nationality').addEventListener('change', async function() {
+    const nationality = this.value;
+    const citySelect = document.getElementById('city');
+    
+    if (!nationality) {
+        citySelect.innerHTML = '<option value="">Select a city</option>';
+        citySelect.disabled = true;
+        return;
+    }
+    
+    showLoading('Loading cities...');
+    
+    try {
+        const response = await fetch(`/api/update_cities/${nationality}`);
+        const data = await response.json();
+        hideLoading();
+        
+        if (response.ok) {
+            citySelect.innerHTML = data.map(city => 
+                `<option value="${city}">${city}</option>`
+            ).join('');
+            citySelect.disabled = false;
+        } else {
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to load cities. Please try again.',
+                icon: 'error',
+                confirmButtonText: 'OK',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+        }
+    } catch (error) {
+        hideLoading();
+        Swal.fire({
+            title: 'Error',
+            text: 'Failed to load cities. Please try again.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            customClass: {
+                confirmButton: 'btn btn-primary'
+            }
+        });
+    }
+});
+
+// Preview ID document
+function previewDocument(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            Swal.fire({
+                title: 'Document Preview',
+                html: `<iframe src="${e.target.result}" width="100%" height="500px" frameborder="0"></iframe>`,
+                width: '80%',
+                confirmButtonText: 'Close',
+                customClass: {
+                    confirmButton: 'btn btn-primary'
+                }
+            });
+        };
+        
+        reader.readAsDataURL(file);
+    }
+}
+
+// Add required indicator to form labels
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('input[required], select[required]').forEach(function(element) {
+        let label = element.previousElementSibling;
+        if (label && label.classList.contains('form-label')) {
+            label.classList.add('required');
+        }
+    });
 });
 </script>
 {% endblock %}
