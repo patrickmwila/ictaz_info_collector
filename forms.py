@@ -147,14 +147,13 @@ class MemberForm(FlaskForm):
         validate_date
     ])
     MobileNo = StringField('Mobile Number', validators=[DataRequired()])
-    IDNumber = StringField('ID Number', validators=[
-        DataRequired(message="Please enter an ID Number"),
-        Regexp(r'^\d{6}/\d{2}/\d{1}$', message="Invalid ID Number format. Example: 243095/64/1")
+    IDNumber = StringField('PMEC ID Number', validators=[
+        DataRequired(message="Please enter your PMEC ID Number")
     ])
     IDType = SelectField('ID Type', choices=[('', 'Select ID Type'), ('NRC', 'NRC'), ('Passport', 'Passport')], validators=[DataRequired()])
     IDDocument = FileField('ID Document', validators=[
         DataRequired(message='Please upload your ID document'),
-        FileAllowed(['pdf', 'png', 'jpg', 'jpeg'], 'Only PDF and image files are allowed!')
+        FileAllowed(['pdf'], 'Only PDF files are allowed!')
     ])
     
     Nationality = SelectField('Nationality', choices=[('', 'Select Country')] + [(country, country) for country in COUNTRY_DATA.keys()], validators=[DataRequired(message='Please select your nationality')])

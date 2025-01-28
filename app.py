@@ -95,127 +95,114 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
-ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
+
+# Configure allowed extensions
+ALLOWED_EXTENSIONS = {'pdf'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def load_valid_ids():
+    try:
+        with open('idnumbers.json', 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return []
+
+def validate_id_number(id_number):
+    """Validate ID number against idnumbers.json"""
+    valid_ids = load_valid_ids()
+    return id_number in valid_ids
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = MemberForm()
-    
     if request.method == 'POST':
-        if not form.IDNumber.data:
-            flash('Please enter an ID Number.', 'warning')
-            return render_template('index.html', form=form)
-            
-        id_number = form.IDNumber.data.strip()
-        
-        # Validate NRC format (e.g., 243095/64/1)
-        import re
-        if not re.match(r'^\d{6}/\d{2}/\d{1}$', id_number):
-            flash('Invalid ID Number format. Please use the format: XXXXXX/XX/X (e.g., 243095/64/1)', 'error')
-            return render_template('index.html', form=form)
-        
-        # Check if we already have a record
-        member = Member.query.filter_by(IDNumber=id_number).first()
-        
-        if member and member.FirstName:  # If member has already submitted details
-            flash('Your details have been retrieved successfully.', 'success')
-            return render_template('details.html', member=member)
+        id_number = request.form.get('IDNumber', '').strip()
+        if id_number:
+            valid_ids = load_valid_ids()
+            if id_number in valid_ids:
+                return redirect(url_for('edit_member', id_number=id_number))
+            else:
+                flash('Invalid PMEC ID number. Please enter a valid ID.', 'error')
+                return redirect(url_for('index'))
         else:
-            # URL encode the ID number for the redirect
-            encoded_id = quote(id_number)
-            return redirect(url_for('edit_member', id_number=encoded_id))
-            
+            flash('Please enter your PMEC ID number.', 'error')
+            return redirect(url_for('index'))
+    
+    # Clear form on GET request
+    form.IDNumber.data = ''
     return render_template('index.html', form=form)
 
-@app.route('/edit_member/<path:id_number>', methods=['GET', 'POST'])
+@app.route('/edit_member/<id_number>', methods=['GET', 'POST'])
 def edit_member(id_number):
-    decoded_id = unquote(id_number)
-    member = Member.query.filter_by(IDNumber=decoded_id).first()
-    
-    if not member:
-        member = Member(IDNumber=decoded_id)
-        db.session.add(member)
+    try:
+        # Validate ID number again for security
+        valid_ids = load_valid_ids()
+        if id_number not in valid_ids:
+            flash('Invalid PMEC ID number.', 'error')
+            return redirect(url_for('index'))
+
+        # Load existing member data if any
         try:
-            db.session.commit()
-        except Exception as e:
-            db.session.rollback()
-            flash('An error occurred while creating your record. Please try again.', 'error')
-            return redirect(url_for('index'))
-    
-    form = MemberForm(obj=member)
-    
-    # Update city choices based on nationality
-    if member.Nationality:
-        cities = COUNTRY_DATA.get(member.Nationality, {}).get('cities', [])
-        form.City.choices = [('', 'Select City')] + [(city, city) for city in cities]
-    
-    if request.method == 'POST':
-        # Security check: ensure ID Number hasn't been tampered with
-        if form.IDNumber.data != decoded_id:
-            flash('Invalid request: ID Number cannot be modified.', 'error')
-            return redirect(url_for('index'))
-            
-        # Update city choices based on form data
-        nationality = request.form.get('Nationality')
-        if nationality:
-            cities = COUNTRY_DATA.get(nationality, {}).get('cities', [])
-            form.City.choices = [('', 'Select City')] + [(city, city) for city in cities]
-    
-    if form.validate_on_submit():
-        # Additional security check before saving
-        if form.IDNumber.data != decoded_id:
-            flash('Invalid request: ID Number cannot be modified.', 'error')
-            return redirect(url_for('index'))
+            with open('members.json', 'r') as f:
+                members = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            members = {}
+
+        form = MemberForm()
         
-        # Handle file upload first
-        if form.IDDocument.data:
-            file = form.IDDocument.data
-            if file and allowed_file(file.filename):
-                try:
-                    # Create a secure filename with member's ID number
-                    filename = secure_filename(f"{member.IDNumber}_{file.filename}")
-                    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                    
-                    # Remove old file if it exists
-                    if member.IDDocument and os.path.exists(os.path.join(app.config['UPLOAD_FOLDER'], member.IDDocument)):
-                        os.remove(os.path.join(app.config['UPLOAD_FOLDER'], member.IDDocument))
-                    
-                    # Save new file
-                    file.save(file_path)
-                    
-                    # Store only the filename in the form data
-                    form.IDDocument.data = filename
-                    
-                except Exception as e:
-                    print(f"Error saving file: {str(e)}")
-                    flash('Error uploading document. Please try again.', 'error')
-                    return render_template('edit.html', form=form, today=datetime.now().strftime('%Y-%m-%d'))
+        if request.method == 'POST':
+            if form.validate_on_submit():
+                # Process form data and save
+                member_data = {
+                    'IDNumber': id_number,
+                    'FirstName': form.FirstName.data,
+                    'MiddleName': form.MiddleName.data,
+                    'LastName': form.LastName.data,
+                    'Gender': form.Gender.data,
+                    'Email': form.Email.data,
+                    'DateofBirth': form.DateofBirth.data,
+                    'MobileNo': form.MobileNo.data,
+                    'IDType': form.IDType.data,
+                    'Nationality': form.Nationality.data,
+                    'MembershipCategory': form.MembershipCategory.data,
+                    'Address': form.Address.data,
+                    'City': form.City.data,
+                    'MonthlyDeduction': form.MonthlyDeduction.data
+                }
+
+                # Handle file upload
+                if form.IDDocument.data:
+                    file = form.IDDocument.data
+                    if file and allowed_file(file.filename):
+                        filename = secure_filename(f"{id_number}_{file.filename}")
+                        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+                        member_data['IDDocument'] = filename
+
+                # Save to members.json
+                members[id_number] = member_data
+                with open('members.json', 'w') as f:
+                    json.dump(members, f, indent=4)
+
+                flash('Your information has been saved successfully!', 'success')
+                return redirect(url_for('index'))
             else:
-                flash('Invalid file type. Please upload a PDF or image file.', 'error')
-                return render_template('edit.html', form=form, today=datetime.now().strftime('%Y-%m-%d'))
-            
-        # Now populate the model with form data
-        form.populate_obj(member)
-        
-        # Get country code based on nationality
-        country_data = COUNTRY_DATA.get(member.Nationality, {})
-        member.CountryCode = country_data.get('code', '')
-        
-        try:
-            db.session.commit()
-            flash('Your information has been updated successfully!', 'success')
-            return redirect(url_for('index'))
-        except Exception as e:
-            db.session.rollback()
-            flash('An error occurred while updating your information. Please try again.', 'error')
-            print(f"Error: {str(e)}")
-            
-    # Get today's date for the date input max attribute
-    today = datetime.now().strftime('%Y-%m-%d')
-    return render_template('edit.html', form=form, today=today)
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        flash(f'{error}', 'error')
+
+        # For GET request, populate form with existing data
+        if id_number in members:
+            member = members[id_number]
+            for field in form._fields:
+                if field in member:
+                    getattr(form, field).data = member[field]
+
+        return render_template('edit.html', form=form, id_number=id_number)
+    except Exception as e:
+        flash(f'An error occurred: {str(e)}', 'error')
+        return redirect(url_for('index'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -336,19 +323,26 @@ def view_member_details(id_number):
 @login_required
 def view_document(id_number):
     """View uploaded ID document"""
-    decoded_id = unquote(id_number)
-    member = Member.query.filter_by(IDNumber=decoded_id).first()
-    
-    if not member or not member.IDDocument:
-        flash('Document not found.', 'error')
-        return redirect(url_for('backoffice') if current_user.is_authenticated else url_for('index'))
-        
     try:
-        return send_from_directory(app.config['UPLOAD_FOLDER'], member.IDDocument)
+        decoded_id = unquote(id_number)
+        member = Member.query.filter_by(IDNumber=decoded_id).first()
+        
+        if not member or not member.IDDocument:
+            return jsonify({'error': 'Document not found'}), 404
+            
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], member.IDDocument)
+        if not os.path.exists(file_path):
+            return jsonify({'error': 'Document file not found'}), 404
+            
+        return send_file(
+            file_path,
+            mimetype='application/pdf',
+            as_attachment=False,
+            download_name=f'document_{member.IDNumber}.pdf'
+        )
     except Exception as e:
         print(f"Error serving file: {str(e)}")
-        flash('Error accessing document.', 'error')
-        return redirect(url_for('backoffice') if current_user.is_authenticated else url_for('index'))
+        return jsonify({'error': 'Error accessing document'}), 500
 
 # Make sure init_db() is called when the app starts
 with app.app_context():

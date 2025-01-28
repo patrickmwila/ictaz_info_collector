@@ -12,6 +12,10 @@
                     <form method="POST" enctype="multipart/form-data" id="memberForm" onsubmit="return confirmSubmit('memberForm')">
                         {{ form.csrf_token }}
                         
+                        <div class="required-legend mb-4">
+                            Fields marked with <span>*</span> are required
+                        </div>
+                        
                         <!-- Personal Information Section -->
                         <div class="card mb-4">
                             <div class="card-header bg-light">
@@ -21,7 +25,7 @@
                                 <div class="row g-3">
                                     <div class="col-md-4">
                                         <div class="form-group">
-                                            {{ form.FirstName.label(class="form-label") }}
+                                            {{ form.FirstName.label(class="form-label required") }}
                                             {{ form.FirstName(class="form-control") }}
                                             {% if form.FirstName.errors %}
                                                 <div class="alert alert-danger">{{ form.FirstName.errors[0] }}</div>
@@ -36,7 +40,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group">
-                                            {{ form.LastName.label(class="form-label") }}
+                                            {{ form.LastName.label(class="form-label required") }}
                                             {{ form.LastName(class="form-control") }}
                                             {% if form.LastName.errors %}
                                                 <div class="alert alert-danger">{{ form.LastName.errors[0] }}</div>
@@ -45,7 +49,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group">
-                                            {{ form.Gender.label(class="form-label") }}
+                                            {{ form.Gender.label(class="form-label required") }}
                                             {{ form.Gender(class="form-select") }}
                                             {% if form.Gender.errors %}
                                                 <div class="alert alert-danger">{{ form.Gender.errors[0] }}</div>
@@ -64,7 +68,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group">
-                                            {{ form.Email.label(class="form-label") }}
+                                            {{ form.Email.label(class="form-label required") }}
                                             {{ form.Email(class="form-control") }}
                                             {% if form.Email.errors %}
                                                 <div class="alert alert-danger">{{ form.Email.errors[0] }}</div>
@@ -93,7 +97,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            {{ form.IDType.label(class="form-label") }}
+                                            {{ form.IDType.label(class="form-label required") }}
                                             {{ form.IDType(class="form-select") }}
                                             {% if form.IDType.errors %}
                                                 <div class="alert alert-danger">{{ form.IDType.errors[0] }}</div>
@@ -102,12 +106,12 @@
                                     </div>
                                     <div class="col-md-12">
                                         <div class="form-group">
-                                            {{ form.IDDocument.label(class="form-label") }}
-                                            {{ form.IDDocument(class="form-control") }}
+                                            {{ form.IDDocument.label(class="form-label required") }}
+                                            {{ form.IDDocument(class="form-control", accept=".pdf") }}
+                                            <small class="text-muted">Only PDF files are accepted. Maximum file size: 16MB</small>
                                             {% if form.IDDocument.errors %}
                                                 <div class="alert alert-danger">{{ form.IDDocument.errors[0] }}</div>
                                             {% endif %}
-                                            <small class="text-muted">Accepted formats: PDF, PNG, JPG, JPEG (Max size: 16MB)</small>
                                         </div>
                                     </div>
                                 </div>
@@ -123,7 +127,7 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            {{ form.MobileNo.label(class="form-label") }}
+                                            {{ form.MobileNo.label(class="form-label required") }}
                                             {{ form.MobileNo(class="form-control") }}
                                             {% if form.MobileNo.errors %}
                                                 <div class="alert alert-danger">{{ form.MobileNo.errors[0] }}</div>
@@ -135,7 +139,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            {{ form.Address.label(class="form-label") }}
+                                            {{ form.Address.label(class="form-label required") }}
                                             {{ form.Address(class="form-control") }}
                                             {% if form.Address.errors %}
                                                 <div class="alert alert-danger">{{ form.Address.errors[0] }}</div>
@@ -144,7 +148,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group">
-                                            {{ form.Nationality.label(class="form-label") }}
+                                            {{ form.Nationality.label(class="form-label required") }}
                                             {{ form.Nationality(class="form-select") }}
                                             {% if form.Nationality.errors %}
                                                 <div class="alert alert-danger">{{ form.Nationality.errors[0] }}</div>
@@ -159,7 +163,7 @@
                                     </div>
                                     <div class="col-md-4">
                                         <div class="form-group">
-                                            {{ form.City.label(class="form-label") }}
+                                            {{ form.City.label(class="form-label required") }}
                                             {{ form.City(class="form-select") }}
                                             {% if form.City.errors %}
                                                 <div class="alert alert-danger">{{ form.City.errors[0] }}</div>
@@ -179,7 +183,7 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            {{ form.MembershipCategory.label(class="form-label") }}
+                                            {{ form.MembershipCategory.label(class="form-label required") }}
                                             {{ form.MembershipCategory(class="form-select") }}
                                             {% if form.MembershipCategory.errors %}
                                                 <div class="alert alert-danger">{{ form.MembershipCategory.errors[0] }}</div>
@@ -188,7 +192,7 @@
                                     </div>
                                     <div class="col-md-6">
                                         <div class="form-group">
-                                            {{ form.MonthlyDeduction.label(class="form-label") }}
+                                            {{ form.MonthlyDeduction.label(class="form-label required") }}
                                             {{ form.MonthlyDeduction(class="form-control") }}
                                             {% if form.MonthlyDeduction.errors %}
                                                 <div class="alert alert-danger">{{ form.MonthlyDeduction.errors[0] }}</div>

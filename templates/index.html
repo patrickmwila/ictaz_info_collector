@@ -31,20 +31,17 @@
 
     .logo-container {
         display: flex;
-        justify-content: space-between;
+        justify-content: space-evenly;
         align-items: center;
         margin-bottom: 3rem;
         padding: 0 2rem;
+        flex-wrap: wrap;
+        gap: 2rem;
     }
 
-    .logo-container img.ictaz-logo {
-        height: 150px;
-        object-fit: contain;
-        transition: transform 0.3s ease;
-    }
-
+    .logo-container img.ictaz-logo,
     .logo-container img.smz-logo {
-        height: 100px;
+        height: 120px;
         object-fit: contain;
         transition: transform 0.3s ease;
     }
@@ -68,6 +65,23 @@
         margin: 0 auto;
         line-height: 1.6;
         opacity: 0.9;
+    }
+
+    @media (max-width: 768px) {
+        .logo-container {
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .main-heading {
+            font-size: 2rem;
+            padding: 0 1rem;
+        }
+
+        .sub-heading {
+            font-size: 1.1rem;
+            padding: 0 1rem;
+        }
     }
 
     .section-card {
@@ -109,12 +123,11 @@
 
     .section-title i {
         font-size: 1.5rem;
-        opacity: 0.8;
     }
 
     .section-text {
-        color: #555;
         margin-bottom: 2rem;
+        color: #555;
         font-size: 1.1rem;
         line-height: 1.6;
     }
@@ -144,6 +157,7 @@
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        width: 100%;
     }
 
     .action-button:hover {
@@ -153,56 +167,14 @@
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(0, 86, 179, 0.3);
     }
-
-    .contact-info {
-        background-color: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 10px;
-        margin-top: 1.5rem;
-        border: 1px solid #e1e1e1;
-    }
-
-    .contact-info a {
-        color: #0056b3;
-        text-decoration: none;
-        font-weight: 500;
-        transition: color 0.3s ease;
-    }
-
-    .contact-info a:hover {
-        color: #003d82;
-    }
-
-    .alert {
-        border-radius: 10px;
-        padding: 1rem 1.5rem;
-        margin-bottom: 2rem;
-        border: none;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    }
-
-    @media (max-width: 768px) {
-        .logo-container {
-            flex-direction: column;
-            gap: 2rem;
-        }
-
-        .main-heading {
-            font-size: 2rem;
-        }
-
-        .section-card {
-            padding: 2rem;
-        }
-    }
 </style>
 
 <div class="container-fluid px-0">
     <div class="hero-section">
         <div class="container hero-content">
             <div class="logo-container">
-                <img src="{{ url_for('static', filename='images/ictaz-logo.png') }}" alt="ICTAZ Logo" class="img-fluid ictaz-logo">
                 <img src="{{ url_for('static', filename='images/smz-logo.png') }}" alt="Smart Zambia Logo" class="img-fluid smz-logo">
+                <img src="{{ url_for('static', filename='images/ictaz-logo.png') }}" alt="ICTAZ Logo" class="img-fluid ictaz-logo">
             </div>
             <h1 class="main-heading">ICTAZ PUBLIC SERVICE WORKERS<br>KYC VERIFICATION</h1>
             <p class="sub-heading">
@@ -220,13 +192,13 @@
                         MEMBER VERIFICATION
                     </h2>
                     <p class="section-text">
-                        Proceed to verify your personal details. Enter your ID number below to begin the verification process.
+                        Proceed to verify your personal details. Enter your PMEC ID number below to begin the verification process.
                     </p>
-                    <form method="POST" action="{{ url_for('index') }}" enctype="multipart/form-data" class="mb-3">
+                    <form method="POST" action="{{ url_for('index') }}" class="mb-3">
                         {{ form.csrf_token }}
                         <div class="form-group mb-4">
                             {{ form.IDNumber.label(class="form-label fw-bold") }}
-                            {{ form.IDNumber(class="form-control", placeholder="Enter your ID number (e.g., 243095/64/1)") }}
+                            {{ form.IDNumber(class="form-control", placeholder="Enter your PMEC ID number") }}
                             {% if form.IDNumber.errors %}
                                 <div class="alert alert-danger mt-2">
                                     <i class="fas fa-exclamation-circle me-2"></i>
@@ -242,21 +214,6 @@
                 </div>
             </div>
         </div>
-
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} d-flex align-items-center">
-                        {% if category == 'success' %}
-                            <i class="fas fa-check-circle me-2"></i>
-                        {% elif category == 'error' %}
-                            <i class="fas fa-exclamation-circle me-2"></i>
-                        {% endif %}
-                        {{ message }}
-                    </div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
     </div>
 </div>
 {% endblock %}
