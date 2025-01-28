@@ -198,19 +198,20 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <div class="form-group">
+                                            {{ form.MonthlyDeduction.label(class="form-label required") }}
+                                            {{ form.MonthlyDeduction(class="form-select") }}
+                                            {% if form.MonthlyDeduction.errors %}
+                                                <div class="alert alert-danger">{{ form.MonthlyDeduction.errors[0] }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group">
                                             {{ form.MembershipCategory.label(class="form-label required") }}
                                             {{ form.MembershipCategory(class="form-select") }}
                                             {% if form.MembershipCategory.errors %}
                                                 <div class="alert alert-danger">{{ form.MembershipCategory.errors[0] }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-group">
-                                            {{ form.MonthlyDeduction.label(class="form-label required") }}
-                                            {{ form.MonthlyDeduction(class="form-control") }}
-                                            {% if form.MonthlyDeduction.errors %}
-                                                <div class="alert alert-danger">{{ form.MonthlyDeduction.errors[0] }}</div>
                                             {% endif %}
                                         </div>
                                     </div>
@@ -233,9 +234,37 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Handle country selection
-    const nationalitySelect = document.querySelector('select[name="Nationality"]');
-    const countryCodeInput = document.querySelector('#CountryCode');
-    const citySelect = document.querySelector('#City');
+    const nationalitySelect = document.getElementById('Nationality');
+    const countryCodeInput = document.getElementById('CountryCode');
+    const monthlyDeductionSelect = document.getElementById('MonthlyDeduction');
+    const membershipCategoryInput = document.getElementById('MembershipCategory');
+
+    // Function to update membership category based on monthly deduction
+    function updateMembershipCategory() {
+        const selectedDeduction = monthlyDeductionSelect.value;
+        if (selectedDeduction) {
+            // Get the corresponding category from the server-side mapping
+            const categories = {
+                'K500.00': 'Full Member',
+                'K400.00': 'Associate',
+                'K300.00': 'Licentiate',
+                'K200.00': 'Affiliate',
+                'K100.00': 'Student'
+            };
+            membershipCategoryInput.value = categories[selectedDeduction] || '';
+        } else {
+            membershipCategoryInput.value = '';
+        }
+    }
+
+    // Add event listener for monthly deduction change
+    monthlyDeductionSelect.addEventListener('change', updateMembershipCategory);
+
+    // Initial update of membership category if deduction is pre-selected
+    updateMembershipCategory();
+
+    // Rest of your existing code...
+    const citySelect = document.getElementById('City');
     const phoneHint = document.getElementById('phone-hint');
     
     function updatePhoneHint() {
@@ -351,7 +380,7 @@ document.getElementById('memberForm').addEventListener('submit', async function(
         title: 'Important Notice',
         html: `
             <div class="text-start">
-                <p class="mb-3">You are about to submit your information to PMEC. Please note:</p>
+                <p class="mb-3">You are about to submit your information to ICTAZ. Please note:</p>
                 <ul class="text-start mb-4" style="list-style-type: none; padding-left: 0;">
                     <li class="mb-2">
                         <i class="fas fa-exclamation-circle text-warning me-2"></i>
@@ -359,10 +388,10 @@ document.getElementById('memberForm').addEventListener('submit', async function(
                     </li>
                     <li class="mb-2">
                         <i class="fas fa-info-circle text-info me-2"></i>
-                        To make changes after submission, please contact PMEC support at:
+                        To make changes after submission, please contact ICTAZ support at:
                         <br>
                         <span class="ms-4">
-                            <i class="fas fa-envelope me-1"></i> support@pmec.org.zm
+                            <i class="fas fa-envelope me-1"></i> info@ictaz.org.zm
                         </span>
                     </li>
                     <li class="mb-2">

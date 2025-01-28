@@ -182,7 +182,7 @@ def index():
                         return jsonify({
                             'status': 'success',
                             'title': 'Success',
-                            'message': 'Your information has been found in our records. Click okay view your record.',
+                            'message': 'Your information has been found in our records. Click okay to view your record.',
                             'icon': 'success',
                             'redirect': url_for('view_member', id_number=quote(id_number))
                         })
@@ -191,7 +191,7 @@ def index():
                         return jsonify({
                             'status': 'success',
                             'title': 'Success',
-                            'message': 'Important Notice: You are about to submit your information for the first time.',
+                            'message': 'GREAT. Your ID Number was found in our database. Click OK to proceed.',
                             'icon': 'info',
                             'redirect': url_for('edit_member', id_number=quote(id_number))
                         })
@@ -200,7 +200,7 @@ def index():
                 return jsonify({
                     'status': 'success',
                     'title': 'Success',
-                    'message': 'Important Notice: You are about to submit your information for the first time.',
+                    'message': 'GREAT. Your ID Number was found in our database. Click OK to proceed.',
                     'icon': 'info',
                     'redirect': url_for('edit_member', id_number=quote(id_number))
                 })

@@ -104,6 +104,30 @@ COUNTRY_DATA = {
     }
 }
 
+# Add membership category data with deductions
+MEMBERSHIP_DATA = {
+    'K500.00': {
+        'category': 'Full Member',
+        'description': 'Full membership with all benefits'
+    },
+    'K400.00': {
+        'category': 'Associate',
+        'description': 'Associate membership level'
+    },
+    'K300.00': {
+        'category': 'Licentiate',
+        'description': 'Licentiate membership level'
+    },
+    'K200.00': {
+        'category': 'Affiliate',
+        'description': 'Affiliate membership level'
+    },
+    'K100.00': {
+        'category': 'Student',
+        'description': 'Student membership level'
+    }
+}
+
 def validate_date(form, field):
     if not field.data:
         return
@@ -161,15 +185,14 @@ class MemberForm(FlaskForm):
     Nationality = SelectField('Nationality', choices=[('', 'Select Country')] + [(country, country) for country in COUNTRY_DATA.keys()], 
                             validators=[DataRequired(message='Please select your nationality')])
     
-    MembershipCategory = SelectField('Membership Category',
-                                   choices=[('', 'Select Category'),
-                                          ('Fellow', 'Fellow'),
-                                          ('Full Member', 'Full Member'),
-                                          ('Associate', 'Associate'),
-                                          ('Licentiate', 'Licentiate'),
-                                          ('Affiliate', 'Affiliate'),
-                                          ('Student', 'Student')],
-                                   validators=[DataRequired()])
+    MonthlyDeduction = SelectField('Monthly Deduction',
+                                 choices=[('', 'Select Monthly Deduction')] + 
+                                        [(amount, f"{amount}/month") 
+                                         for amount in MEMBERSHIP_DATA.keys()],
+                                 validators=[DataRequired()])
+    
+    MembershipCategory = StringField('Membership Category', 
+                                   render_kw={'readonly': True})
     
     Address = StringField('Address', validators=[
         DataRequired(message='Address is required')
@@ -178,10 +201,6 @@ class MemberForm(FlaskForm):
     City = SelectField('City', 
                       choices=[('', 'Select City')], 
                       validators=[DataRequired(message='Please select a city')])
-    MonthlyDeduction = FloatField('Monthly Deduction', validators=[
-        DataRequired(message='Monthly deduction is required'),
-        NumberRange(min=0, message='Monthly deduction must be a positive number')
-    ])
 
     def __init__(self, *args, **kwargs):
         super(MemberForm, self).__init__(*args, **kwargs)
