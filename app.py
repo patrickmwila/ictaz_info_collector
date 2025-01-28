@@ -182,7 +182,7 @@ def index():
                         return jsonify({
                             'status': 'success',
                             'title': 'Success',
-                            'message': 'Your information has been found in our records.',
+                            'message': 'Your information has been found in our records. Click okay view your record.',
                             'icon': 'success',
                             'redirect': url_for('view_member', id_number=quote(id_number))
                         })
@@ -263,7 +263,7 @@ def edit_member(id_number):
             return jsonify({
                 'status': 'error',
                 'title': 'Access Denied',
-                'message': 'The provided PMEC ID number was not found in our records.',
+                'message': 'The provided ID number was not found in our records.',
                 'icon': 'error'
             }), 400
 
