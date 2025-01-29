@@ -209,7 +209,7 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             {{ form.MembershipCategory.label(class="form-label required") }}
-                                            {{ form.MembershipCategory(class="form-select") }}
+                                            {{ form.MembershipCategory(class="form-control bg-light", readonly=true, style="cursor: not-allowed;") }}
                                             {% if form.MembershipCategory.errors %}
                                                 <div class="alert alert-danger">{{ form.MembershipCategory.errors[0] }}</div>
                                             {% endif %}

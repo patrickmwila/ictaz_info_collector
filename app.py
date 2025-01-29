@@ -167,8 +167,8 @@ def index():
         
         # Load and check valid IDs
         valid_ids = load_valid_ids()
-        print(f"Checking ID: {id_number}")  # Debug print
-        print(f"Valid IDs: {valid_ids}")    # Debug print
+        # print(f"Checking ID: {id_number}")  # Debug print
+        # print(f"Valid IDs: {valid_ids}")    # Debug print
         
         if id_number in valid_ids:
             print(f"Valid ID found: {id_number}")  # Debug print
