@@ -70,13 +70,17 @@ class Member(db.Model):
 
 def init_db():
     with app.app_context():
+        # Create all tables
         db.create_all()
         
         # Create admin user if not exists
-        if not User.query.filter_by(username='admin').first():
+        admin = User.query.filter_by(username='admin').first()
+        if not admin:
             admin = User(username='admin')
             admin.set_password('echoroot')
             db.session.add(admin)
+            db.session.commit()
+            print("Admin user created successfully")
         
         # Read ID numbers from JSON file
         try:
@@ -91,12 +95,10 @@ def init_db():
                         db.session.add(member)
                 
             db.session.commit()
-        except FileNotFoundError:
-            print("Warning: idnumbers.json not found. No initial members created.")
-        except json.JSONDecodeError:
-            print("Warning: Invalid JSON format in idnumbers.json")
+            print("Member records initialized")
         except Exception as e:
-            print(f"Error reading idnumbers.json: {str(e)}")
+            print(f"Error initializing database: {str(e)}")
+            db.session.rollback()
 
 # Configure allowed extensions
 ALLOWED_EXTENSIONS = {'pdf'}
@@ -405,9 +407,7 @@ def login():
             login_user(user)
             flash('Logged in successfully.', 'success')
             return redirect(url_for('backoffice'))
-        else:
-            flash('Invalid username or password.', 'error')
-            
+        flash('Invalid username or password.', 'error')
     return render_template('login.html', form=form)
 
 @app.route('/logout')
