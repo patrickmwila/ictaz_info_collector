@@ -16,7 +16,7 @@
             {% endwith %}
 
             <div class="card">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header text-white btn-primary">
                     <h2 class="text-center mb-0">KYC Verification</h2>
                 </div>
                 <div class="card-body">
@@ -29,7 +29,7 @@
                         
                         <!-- Personal Information Section -->
                         <div class="card mb-4">
-                            <div class="card-header bg-light">
+                            <div class="card-header btn-primary">
                                 <h4 class="mb-0">Personal Information</h4>
                             </div>
                             <div class="card-body">
@@ -92,7 +92,7 @@
 
                         <!-- Identification Section -->
                         <div class="card mb-4">
-                            <div class="card-header bg-light">
+                            <div class="card-header btn-primary">
                                 <h4 class="mb-0">Identification Details</h4>
                             </div>
                             <div class="card-body">
@@ -135,7 +135,7 @@
 
                         <!-- Contact Information Section -->
                         <div class="card mb-4">
-                            <div class="card-header bg-light">
+                            <div class="card-header btn-primary">
                                 <h4 class="mb-0">Contact Information</h4>
                             </div>
                             <div class="card-body">
@@ -191,7 +191,7 @@
 
                         <!-- Membership Details Section -->
                         <div class="card mb-4">
-                            <div class="card-header bg-light">
+                            <div class="card-header btn-primary">
                                 <h4 class="mb-0">Membership Details</h4>
                             </div>
                             <div class="card-body">
@@ -199,7 +199,38 @@
                                     <div class="col-md-6">
                                         <div class="form-group">
                                             {{ form.MonthlyDeduction.label(class="form-label required") }}
-                                            {{ form.MonthlyDeduction(class="form-select") }}
+                                            <select class="form-select" id="MonthlyDeduction" name="MonthlyDeduction" required>
+                                                <option value="">Select Monthly Deduction</option>
+                                                <optgroup label="Fellow">
+                                                    <option value="K495.00">K495.00</option>
+                                                    <option value="K375.00">K375.00</option>
+                                                    <option value="K250.00">K250.00</option>
+                                                </optgroup>
+                                                <optgroup label="Full Member">
+                                                    <option value="K271.00">K271.00</option>
+                                                    <option value="K213.00">K213.00</option>
+                                                    <option value="K142.00">K142.00</option>
+                                                </optgroup>
+                                                <optgroup label="Associate">
+                                                    <option value="K200.00">K200.00</option>
+                                                    <option value="K150.00">K150.00</option>
+                                                    <option value="K100.00">K100.00</option>
+                                                </optgroup>
+                                                <optgroup label="Licentiate">
+                                                    <option value="K154.00">K154.00</option>
+                                                    <option value="K113.00">K113.00</option>
+                                                    <option value="K75.00">K75.00</option>
+                                                </optgroup>
+                                                <optgroup label="Affiliate">
+                                                    <option value="K128.00">K128.00</option>
+                                                    <option value="K95.00">K95.00</option>
+                                                    <option value="K64.00">K64.00</option>
+                                                </optgroup>
+                                                <optgroup label="Student">
+                                                    <option value="K25.00">K25.00</option>
+                                                    <option value="K17.00">K17.00</option>
+                                                </optgroup>
+                                            </select>
                                             {% if form.MonthlyDeduction.errors %}
                                                 <div class="alert alert-danger">{{ form.MonthlyDeduction.errors[0] }}</div>
                                             {% endif %}
@@ -243,15 +274,10 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateMembershipCategory() {
         const selectedDeduction = monthlyDeductionSelect.value;
         if (selectedDeduction) {
-            // Get the corresponding category from the server-side mapping
-            const categories = {
-                'K500.00': 'Full Member',
-                'K400.00': 'Associate',
-                'K300.00': 'Licentiate',
-                'K200.00': 'Affiliate',
-                'K100.00': 'Student'
-            };
-            membershipCategoryInput.value = categories[selectedDeduction] || '';
+            // Get the category from the optgroup label
+            const selectedOption = monthlyDeductionSelect.options[monthlyDeductionSelect.selectedIndex];
+            const optgroup = selectedOption.parentElement;
+            membershipCategoryInput.value = optgroup.label;
         } else {
             membershipCategoryInput.value = '';
         }

@@ -106,24 +106,28 @@ COUNTRY_DATA = {
 
 # Add membership category data with deductions
 MEMBERSHIP_DATA = {
-    'K500.00': {
-        'category': 'Full Member',
+    'Fellow': {
+        'deductions': ['495.00', '375.00', '250.00'],
+        'description': 'Fellow membership level'
+    },
+    'Full Member': {
+        'deductions': ['271.00', '213.00', '142.00'],
         'description': 'Full membership with all benefits'
     },
-    'K400.00': {
-        'category': 'Associate',
+    'Associate': {
+        'deductions': ['200.00', '150.00', '100.00'],
         'description': 'Associate membership level'
     },
-    'K300.00': {
-        'category': 'Licentiate',
+    'Licentiate': {
+        'deductions': ['154.00', '113.00', '75.00'],
         'description': 'Licentiate membership level'
     },
-    'K200.00': {
-        'category': 'Affiliate',
+    'Affiliate': {
+        'deductions': ['128.00', '95.00', '64.00'],
         'description': 'Affiliate membership level'
     },
-    'K100.00': {
-        'category': 'Student',
+    'Student': {
+        'deductions': ['25.00', '17.00'],
         'description': 'Student membership level'
     }
 }
@@ -187,8 +191,9 @@ class MemberForm(FlaskForm):
     
     MonthlyDeduction = SelectField('Monthly Deduction',
                                  choices=[('', 'Select Monthly Deduction')] + 
-                                        [(amount, f"{amount}/month") 
-                                         for amount in MEMBERSHIP_DATA.keys()],
+                                        [(f"K{amount}", f"K{amount}") 
+                                         for category in MEMBERSHIP_DATA 
+                                         for amount in MEMBERSHIP_DATA[category]['deductions']],
                                  validators=[DataRequired()])
     
     MembershipCategory = StringField('Membership Category', 
