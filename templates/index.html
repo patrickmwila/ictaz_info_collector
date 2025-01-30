@@ -197,7 +197,7 @@
             </div>
             <h1 class="main-heading">ICTAZ PUBLIC SERVICE WORKERS<br>KYC VERIFICATION</h1>
             <p class="sub-heading">
-                This site will help collect your KYC's in readiness to onboard you onto the New ICTAZ Membership System 
+                <em>This site will help collect your KYC's in readiness to onboard you onto the New ICTAZ Membership System</em>
             </p>
         </div>
     </div>
@@ -243,7 +243,7 @@ document.getElementById('verificationForm').addEventListener('submit', async fun
     e.preventDefault();
     
     // Show loading state
-    showLoading('Verifying your ID number...');
+    // showLoading('Verifying your ID number...');
     
     try {
         const formData = new FormData(this);
@@ -253,7 +253,7 @@ document.getElementById('verificationForm').addEventListener('submit', async fun
         });
         
         const data = await response.json();
-        hideLoading();
+        // hideLoading();
         
         if (response.ok) {
             // Show success message and redirect

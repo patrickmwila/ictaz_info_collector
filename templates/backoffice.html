@@ -334,13 +334,13 @@
 <script>
 function previewDocument(url, title) {
     // First show loading state
-    Swal.fire({
-        title: 'Loading document...',
-        allowOutsideClick: false,
-        didOpen: () => {
-            Swal.showLoading();
-        }
-    });
+    // Swal.fire({
+    //     title: 'Loading document...',
+    //     allowOutsideClick: false,
+    //     didOpen: () => {
+    //         Swal.showLoading();
+    //     }
+    // });
 
     // Fetch the document
     fetch(url)
