@@ -11,14 +11,18 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Create upload folder if it doesn't exist
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads')
+UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads'))
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your-secret-key-here'  # Change this to a secure secret key
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')  # Change this to a secure secret key
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///members.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_TYPE'] = 'filesystem'
@@ -31,6 +35,10 @@ db = SQLAlchemy(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
+
+# Admin credentials from environment variables
+ADMIN_USERNAME = os.getenv('ADMIN_USERNAME')
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD')
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -45,7 +53,7 @@ class User(UserMixin, db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    return User.query.get(int(user_id))
 
 class Member(db.Model):
     __tablename__ = 'Members'
@@ -76,10 +84,10 @@ def init_db():
         db.create_all()
         
         # Create admin user if not exists
-        admin = User.query.filter_by(username='admin').first()
+        admin = User.query.filter_by(username=ADMIN_USERNAME).first()
         if not admin:
-            admin = User(username='admin')
-            admin.set_password('echoroot')
+            admin = User(username=ADMIN_USERNAME)
+            admin.set_password(ADMIN_PASSWORD)
             db.session.add(admin)
             db.session.commit()
             print("Admin user created successfully")
@@ -412,18 +420,24 @@ def update_cities(nationality):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('backoffice'))
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
         
-    form = LoginForm()
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
-        if user and user.check_password(form.password.data):
+        user = User.query.filter_by(username=username).first()
+        
+        if user and user.check_password(password):
             login_user(user)
             flash('Logged in successfully.', 'success')
             return redirect(url_for('backoffice'))
-        flash('Invalid username or password.', 'error')
-    return render_template('login.html', form=form)
+        else:
+            flash('Invalid username or password', 'error')
+    
+    return render_template('login.html')
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 @app.route('/logout')
 @login_required

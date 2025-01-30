@@ -151,6 +151,11 @@ def validate_date(form, field):
     except ValueError:
         raise ValidationError('Invalid date format. Use YYYY-MM-DD')
 
+class LoginForm(FlaskForm):
+    username = StringField('Username', validators=[DataRequired()])
+    password = PasswordField('Password', validators=[DataRequired()])
+    submit = SubmitField('Login')
+
 class MemberForm(FlaskForm):
     FirstName = StringField('First Name', validators=[
         DataRequired(message='First Name is required'),
@@ -182,7 +187,7 @@ class MemberForm(FlaskForm):
     ])
     IDType = SelectField('ID Type', choices=[('', 'Select ID Type'), ('NRC', 'NRC'), ('Passport', 'Passport')], validators=[DataRequired()])
     IDDocument = FileField('ID Document', validators=[
-        Optional(),  
+        DataRequired(message='Please upload your ID document'),
         FileAllowed(['pdf'], 'Only PDF files are allowed!')
     ])
     
@@ -245,8 +250,3 @@ class MemberForm(FlaskForm):
             valid_cities = COUNTRY_DATA[self.Nationality.data]['cities']
             if field.data not in valid_cities:
                 raise ValidationError('Please select a valid city for the selected nationality')
-
-class LoginForm(FlaskForm):
-    username = StringField('Username', validators=[DataRequired()])
-    password = PasswordField('Password', validators=[DataRequired()])
-    submit = SubmitField('Login')
