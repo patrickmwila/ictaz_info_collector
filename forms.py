@@ -11,7 +11,7 @@ COUNTRY_DATA = {
         'cities': ['Lusaka', 'Kitwe', 'Ndola', 'Kabwe', 'Chingola', 'Mufulira', 'Livingstone', 'Kasama', 'Chipata', 'Solwezi']
     },
     'South African': {
-        'code': 'ZA',
+        'code': 'RSA',
         'cities': ['Johannesburg', 'Cape Town', 'Durban', 'Pretoria', 'Port Elizabeth', 'Bloemfontein', 'East London']
     },
     'Kenyan': {

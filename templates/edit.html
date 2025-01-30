@@ -262,15 +262,16 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="form-group">
-                                            {{ form.QualificationDocument.label(class="form-label required") }}
-                                            {{ form.QualificationDocument(class="form-control") }}
-                                            {% if form.QualificationDocument.errors %}
-                                                {% for error in form.QualificationDocument.errors %}
-                                                    <span class="text-danger">{{ error }}</span>
-                                                {% endfor %}
-                                            {% endif %}
-                                        </div>
+                                      <div class="form-group">
+                                          {{ form.QualificationDocument.label(class="form-label required") }}
+                                          {{ form.QualificationDocument(class="form-control", accept=".pdf") }}
+                                          <small class="text-muted">Only PDF files are accepted. Maximum file size: 16MB</small>
+                                          {% if form.QualificationDocument.errors %}
+                                              {% for error in form.QualificationDocument.errors %}
+                                                  <span class="text-danger">{{ error }}</span>
+                                              {% endfor %}
+                                          {% endif %}
+                                      </div>
                                     </div>
                                 </div>
                             </div>
