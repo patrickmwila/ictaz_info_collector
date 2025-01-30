@@ -67,6 +67,8 @@ class Member(db.Model):
     CountryCode = db.Column(db.String(2))
     City = db.Column(db.String(100))
     MonthlyDeduction = db.Column(db.Float)
+    HighestQualification = db.Column(db.String(100))
+    QualificationDocument = db.Column(db.String(255))  # Store the file path
 
 def init_db():
     with app.app_context():
@@ -127,7 +129,7 @@ def save_to_backoffice(member_data):
             'IDNumber', 'FirstName', 'MiddleName', 'LastName', 'Gender', 
             'Email', 'DateofBirth', 'MobileNo', 'IDType', 'Nationality',
             'MembershipCategory', 'Address', 'City', 'MonthlyDeduction',
-            'IDDocument', 'SubmissionDate'
+            'IDDocument', 'HighestQualification', 'QualificationDocument', 'SubmissionDate'
         ]
         
         # Add submission date to member data
@@ -300,6 +302,15 @@ def edit_member(id_number):
                     form.IDDocument.data.save(os.path.join(member_upload_dir, new_filename))
                     id_document = f"{member_dir_name}/{new_filename}"
 
+                # Add this after handling IDDocument
+                qualification_document = None
+                if form.QualificationDocument.data:
+                    filename = secure_filename(form.QualificationDocument.data.filename)
+                    extension = os.path.splitext(filename)[1]
+                    new_filename = f"{member_dir_name}_qual{extension}"
+                    form.QualificationDocument.data.save(os.path.join(member_upload_dir, new_filename))
+                    qualification_document = f"{member_dir_name}/{new_filename}"
+
                 # Prepare member data for local storage
                 member_data = {
                     'FirstName': form.FirstName.data,
@@ -313,6 +324,7 @@ def edit_member(id_number):
                     'IDType': form.IDType.data,
                     'Nationality': form.Nationality.data,
                     'MembershipCategory': form.MembershipCategory.data,
+                    'HighestQualification': form.HighestQualification.data,
                     'City': form.City.data,
                     'Address': form.Address.data,
                     'MonthlyDeduction': form.MonthlyDeduction.data,
@@ -321,6 +333,9 @@ def edit_member(id_number):
 
                 if id_document:
                     member_data['IDDocument'] = id_document
+
+                if qualification_document:
+                    member_data['QualificationDocument'] = qualification_document
 
                 # Save to members.json
                 try:

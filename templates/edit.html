@@ -247,6 +247,34 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <!-- Add this after the MonthlyDeduction field -->
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            {{ form.HighestQualification.label(class="form-label required") }}
+                                            <span class="text-danger">*</span>
+                                            {{ form.HighestQualification(class="form-control") }}
+                                            {% if form.HighestQualification.errors %}
+                                                {% for error in form.HighestQualification.errors %}
+                                                    <span class="text-danger">{{ error }}</span>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            {{ form.QualificationDocument.label(class="form-label required") }}
+                                            <span class="text-danger">*</span>
+                                            {{ form.QualificationDocument(class="form-control") }}
+                                            {% if form.QualificationDocument.errors %}
+                                                {% for error in form.QualificationDocument.errors %}
+                                                    <span class="text-danger">{{ error }}</span>
+                                                {% endfor %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

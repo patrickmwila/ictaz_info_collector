@@ -93,10 +93,27 @@
                                     <td>
                                         {% if member.IDDocument %}
                                             <a href="{{ url_for('uploaded_file', filename=member.IDDocument) }}" target="_blank" class="btn btn-sm btn-primary">
-                                                <i class="fas fa-file-pdf me-2"></i>View Document
+                                                <i class="fas fa-file-pdf me-2"></i>View ID Document
                                             </a>
                                         {% else %}
                                             No document uploaded
+                                        {% endif %}
+                                    </td>
+                                </tr>
+
+                                <tr>
+                                    <th class="bg-light">Highest Qualification</th>
+                                    <td>{{ member.HighestQualification }}</td>
+                                </tr>
+                                <tr>
+                                    <th class="bg-light">Qualification Document</th>
+                                    <td>
+                                        {% if member.QualificationDocument %}
+                                            <a href="{{ url_for('uploaded_file', filename=member.QualificationDocument) }}" target="_blank" class="btn btn-primary btn-sm">
+                                                View Qualification Document
+                                            </a>
+                                        {% else %}
+                                            Not uploaded
                                         {% endif %}
                                     </td>
                                 </tr>

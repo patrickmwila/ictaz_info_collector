@@ -207,6 +207,21 @@ class MemberForm(FlaskForm):
                       choices=[('', 'Select City')], 
                       validators=[DataRequired(message='Please select a city')])
 
+    HighestQualification = SelectField('Highest Qualification Obtained',
+                                    choices=[('', 'Select Qualification'),
+                                            ('PhD', 'Doctorate/PhD'),
+                                            ('Masters', 'Master\'s Degree'),
+                                            ('Bachelors', 'Bachelor\'s Degree'),
+                                            ('Diploma', 'Diploma'),
+                                            ('Certificate', 'Certificate'),
+                                            ('Other', 'Other')],
+                                    validators=[DataRequired(message='Please select your highest qualification')])
+
+    QualificationDocument = FileField('Qualification Document', validators=[
+        DataRequired(message='Please upload your qualification document'),
+        FileAllowed(['pdf'], 'Only PDF files are allowed')
+    ])
+
     def __init__(self, *args, **kwargs):
         super(MemberForm, self).__init__(*args, **kwargs)
         self.original_nationality = None
