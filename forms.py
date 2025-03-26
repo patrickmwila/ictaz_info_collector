@@ -115,20 +115,16 @@ MEMBERSHIP_DATA = {
         'description': 'Full membership with all benefits'
     },
     'Associate': {
-        'deductions': ['200.00', '150.00', '100.00'],
+        'deductions': ['150.00', '100.00'],
         'description': 'Associate membership level'
     },
     'Licentiate': {
-        'deductions': ['154.00', '113.00', '75.00'],
+        'deductions': ['113.00'],
         'description': 'Licentiate membership level'
     },
     'Affiliate': {
-        'deductions': ['128.00', '95.00', '64.00'],
+        'deductions': ['95.00', '64.00'],
         'description': 'Affiliate membership level'
-    },
-    'Student': {
-        'deductions': ['25.00', '17.00'],
-        'description': 'Student membership level'
     }
 }
 

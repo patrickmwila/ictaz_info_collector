@@ -197,7 +197,7 @@
             </div>
             <h1 class="main-heading">ICTAZ PUBLIC SERVICE WORKERS<br>KYC VERIFICATION</h1>
             <p class="sub-heading">
-                <em>This site will help collect your KYC's in readiness to onboard you onto the New ICTAZ Membership System</em>
+                <em>This portal will help collect your KYC's in readiness to onboard you onto the New ICTAZ Membership System</em>
             </p>
         </div>
     </div>
@@ -211,13 +211,13 @@
                         MEMBER VERIFICATION
                     </h2>
                     <p class="section-text">
-                        Proceed to verify your personal details. Enter your ID number below to begin the verification process.
+                        <em>Proceed to verify your personal details. Enter your NRC or Passport number below to begin the verification process.</em>
                     </p>
                     <form id="verificationForm" method="POST" class="mb-3">
                         {{ form.csrf_token }}
                         <div class="form-group mb-4">
                             {{ form.IDNumber.label(class="form-label fw-bold") }}
-                            {{ form.IDNumber(class="form-control", placeholder="Enter your ID number", autocomplete="off") }}
+                            {{ form.IDNumber(class="form-control", placeholder="e.g 575119/67/1", autocomplete="off") }}
                             {% if form.IDNumber.errors %}
                                 <div class="alert alert-danger mt-2">
                                     <i class="fas fa-exclamation-circle me-2"></i>
@@ -243,7 +243,7 @@ document.getElementById('verificationForm').addEventListener('submit', async fun
     e.preventDefault();
     
     // Show loading state
-    // showLoading('Verifying your ID number...');
+    showLoading('Verifying your ID number...');
     
     try {
         const formData = new FormData(this);
@@ -253,7 +253,7 @@ document.getElementById('verificationForm').addEventListener('submit', async fun
         });
         
         const data = await response.json();
-        // hideLoading();
+        hideLoading();
         
         if (response.ok) {
             // Show success message and redirect

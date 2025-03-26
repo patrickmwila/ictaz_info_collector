@@ -17,9 +17,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Create upload folder if it doesn't exist
-UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'uploads'))
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', os.path.join(BASE_DIR, 'static', 'uploads'))
+MEMBERS_JSON = os.path.join(BASE_DIR, 'members.json')
+BACKOFFICE_DIR = os.path.join(BASE_DIR, 'backoffice')
+BACKOFFICE_CSV = os.path.join(BACKOFFICE_DIR, 'members.csv')
+
+
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+except Exception as e:
+    print(f"Error creating upload folder: {e}")
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY')  # Change this to a secure secret key
@@ -93,8 +101,9 @@ def init_db():
             print("Admin user created successfully")
         
         # Read ID numbers from JSON file
+        json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'idnumbers.json')
         try:
-            with open('idnumbers.json', 'r') as file:
+            with open(json_path, 'r') as file:
                 id_data = json.load(file)
                 id_numbers = id_data.get('IDNumbers', [])
                 
@@ -118,8 +127,9 @@ def allowed_file(filename):
 
 def load_valid_ids():
     """Load valid IDs from idnumbers.json"""
+    json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'idnumbers.json')
     try:
-        with open('idnumbers.json', 'r') as f:
+        with open(json_path, 'r') as f:
             data = json.load(f)
             return data.get('IDNumbers', [])  # Get the list of IDs from the nested structure
     except FileNotFoundError:
@@ -132,43 +142,52 @@ def load_valid_ids():
 def save_to_backoffice(member_data):
     """Save member data to backoffice CSV file"""
     try:
-        file_exists = os.path.isfile('backoffice/members.csv')
+        # Create backoffice directory if it doesn't exist
+        os.makedirs(BACKOFFICE_DIR, exist_ok=True)
+        
+        file_exists = os.path.isfile(BACKOFFICE_CSV)
         fieldnames = [
-            'IDNumber', 'FirstName', 'MiddleName', 'LastName', 'Gender', 
+            'IDNumber', 'FirstName', 'MiddleName', 'LastName', 'Gender',
             'Email', 'DateofBirth', 'MobileNo', 'IDType', 'Nationality',
             'MembershipCategory', 'Address', 'City', 'MonthlyDeduction',
             'IDDocument', 'HighestQualification', 'QualificationDocument', 'SubmissionDate'
         ]
-        
+
         # Add submission date to member data
         member_data['SubmissionDate'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        
-        # Create backoffice directory if it doesn't exist
-        os.makedirs('backoffice', exist_ok=True)
-        
-        # Write to CSV
-        with open('backoffice/members.csv', mode='a', newline='', encoding='utf-8') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+
+        try:
+            # Write to CSV with proper encoding
+            with open(BACKOFFICE_CSV, mode='a', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                
+                # Write header if file doesn't exist
+                if not file_exists:
+                    writer.writeheader()
+                
+                writer.writerow(member_data)
+
+            print(f"Successfully saved to backoffice: {member_data['IDNumber']}")
+            return True
             
-            # Write header if file doesn't exist
-            if not file_exists:
-                writer.writeheader()
-            
-            writer.writerow(member_data)
-            
-        print(f"Successfully saved to backoffice: {member_data['IDNumber']}")
-        return True
+        except Exception as e:
+            print(f"Error writing to CSV: {str(e)}")
+            return False
+
     except Exception as e:
         print(f"Error saving to backoffice: {str(e)}")
         return False
 
+    return render_template('index.html', form=form)
+
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     form = MemberForm()
-    
+
     if request.method == 'POST':
         id_number = request.form.get('IDNumber', '').strip()
-        
+
         if not id_number:
             return jsonify({
                 'status': 'error',
@@ -176,55 +195,55 @@ def index():
                 'message': 'Please enter your PMEC ID number.',
                 'icon': 'error'
             }), 400
-        
+
         # Load and check valid IDs
         valid_ids = load_valid_ids()
-        # print(f"Checking ID: {id_number}")  # Debug print
-        # print(f"Valid IDs: {valid_ids}")    # Debug print
-        
+
         if id_number in valid_ids:
-            print(f"Valid ID found: {id_number}")  # Debug print
-            
+            print(f"Valid ID found: {id_number}")
+
             # Check if member data exists
             try:
-                with open('members.json', 'r') as f:
-                    members = json.load(f)
-                    if id_number in members:
-                        # Member exists, return success with view redirect
-                        return jsonify({
-                            'status': 'success',
-                            'title': 'Success',
-                            'message': 'Your information has been found in our records. Click okay to view your record.',
-                            'icon': 'success',
-                            'redirect': url_for('view_member', id_number=quote(id_number))
-                        })
-                    else:
-                        # New member, return success with edit redirect
-                        return jsonify({
-                            'status': 'success',
-                            'title': 'Success',
-                            'message': 'GREAT. Your ID Number was found in our database. Click OK to proceed.',
-                            'icon': 'info',
-                            'redirect': url_for('edit_member', id_number=quote(id_number))
-                        })
-            except (FileNotFoundError, json.JSONDecodeError):
-                # No members file, return success with edit redirect
+                if os.path.exists(MEMBERS_JSON):
+                    with open(MEMBERS_JSON, 'r') as f:
+                        members = json.load(f)
+                        if id_number in members:
+                            # Member exists, return success with view redirect
+                            return jsonify({
+                                'status': 'success',
+                                'title': 'Success',
+                                'message': 'Your information has been found in our records. Click okay to view your record.',
+                                'icon': 'success',
+                                'redirect': url_for('view_member', id_number=quote(id_number))
+                            })
+
+                # If we get here, either file doesn't exist or member not found
                 return jsonify({
                     'status': 'success',
                     'title': 'Success',
-                    'message': 'GREAT. Your ID Number was found in our database. Click OK to proceed.',
+                    'message': 'We found a match! Your ID Number was found in our records. Click OK to proceed.',
+                    'icon': 'info',
+                    'redirect': url_for('edit_member', id_number=quote(id_number))
+                })
+            except Exception as e:
+                print(f"Error checking member status: {str(e)}")
+                # Handle any file access or JSON parsing errors
+                return jsonify({
+                    'status': 'success',
+                    'title': 'Success',
+                    'message': 'We found a match! Your ID Number was found in our records. Click OK to proceed.',
                     'icon': 'info',
                     'redirect': url_for('edit_member', id_number=quote(id_number))
                 })
         else:
-            print(f"Invalid ID: {id_number}")  # Debug print
+            print(f"Invalid ID: {id_number}")
             return jsonify({
                 'status': 'error',
                 'title': 'Access Denied',
                 'message': 'The provided ID number was not found in our records.',
                 'icon': 'error'
             }), 400
-    
+
     return render_template('index.html', form=form)
 
 @app.route('/view_member/<path:id_number>')
@@ -232,7 +251,7 @@ def view_member(id_number):
     try:
         # Decode the ID number
         decoded_id = unquote(id_number)
-        
+
         # Validate ID number again for security
         valid_ids = load_valid_ids()
         if decoded_id not in valid_ids:
@@ -241,34 +260,63 @@ def view_member(id_number):
 
         # Load member data
         try:
-            with open('members.json', 'r') as f:
+            if not os.path.exists(MEMBERS_JSON):
+                flash('Member information not found.', 'error')
+                return redirect(url_for('index'))
+
+            with open(MEMBERS_JSON, 'r') as f:
                 members = json.load(f)
                 if decoded_id in members:
                     member = members[decoded_id]
+
+                    # Add file existence checks for documents
+                    if 'IDDocument' in member:
+                        id_doc_path = os.path.join(UPLOAD_FOLDER, member['IDDocument'])
+                        member['IDDocumentExists'] = os.path.exists(id_doc_path)
+
+                    if 'QualificationDocument' in member:
+                        qual_doc_path = os.path.join(UPLOAD_FOLDER, member['QualificationDocument'])
+                        member['QualificationDocumentExists'] = os.path.exists(qual_doc_path)
+
                     return render_template('view_member.html', member=member)
                 else:
                     flash('Member information not found.', 'error')
                     return redirect(url_for('index'))
-        except (FileNotFoundError, json.JSONDecodeError):
-            flash('Member information not found.', 'error')
+
+        except json.JSONDecodeError:
+            print(f"Error: Invalid JSON in members.json")
+            flash('Error reading member data. Please contact support.', 'error')
             return redirect(url_for('index'))
-            
+        except Exception as e:
+            print(f"Error reading member data: {str(e)}")
+            flash('Error accessing member information. Please try again later.', 'error')
+            return redirect(url_for('index'))
+
     except Exception as e:
-        print(f"Error in view_member: {str(e)}")  # Debug print
-        flash(f'An error occurred: {str(e)}', 'error')
+        print(f"Error in view_member: {str(e)}")
+        flash('An unexpected error occurred. Please try again later.', 'error')
         return redirect(url_for('index'))
+
 
 @app.route('/edit_member/<path:id_number>', methods=['GET', 'POST'])
 def edit_member(id_number):
     try:
         decoded_id = unquote(id_number)
-        
+
         # Create member-specific upload directory
         member_dir_name = decoded_id.replace('/', '_')
-        member_upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], member_dir_name)
-        if not os.path.exists(member_upload_dir):
-            os.makedirs(member_upload_dir)
-        
+        member_upload_dir = os.path.join(UPLOAD_FOLDER, member_dir_name)
+        try:
+            os.makedirs(member_upload_dir, exist_ok=True)
+        except Exception as e:
+            print(f"Error creating member upload directory: {str(e)}")
+            return jsonify({
+                'status': 'error',
+                'title': 'Error',
+                'message': 'Could not create upload directory',
+                'icon': 'error'
+            }), 500
+
         # Validate ID number again for security
         valid_ids = load_valid_ids()
         if decoded_id not in valid_ids:
@@ -280,46 +328,65 @@ def edit_member(id_number):
             }), 400
 
         form = MemberForm()
-        
-        # Set IDNumber field as readonly and populate it
         form.IDNumber.render_kw = {'readonly': True}
         form.IDNumber.data = decoded_id
-        
+
         # Load existing data if available
         existing_data = None
         try:
-            with open('members.json', 'r') as f:
-                members = json.load(f)
-                if decoded_id in members:
-                    existing_data = members[decoded_id]
-        except (FileNotFoundError, json.JSONDecodeError):
-            pass
+            if os.path.exists(MEMBERS_JSON):
+                with open(MEMBERS_JSON, 'r') as f:
+                    members = json.load(f)
+                    if decoded_id in members:
+                        existing_data = members[decoded_id]
+        except Exception as e:
+            print(f"Error loading existing data: {str(e)}")
 
         if request.method == 'POST':
-            # Update city choices based on selected nationality before validation
             if form.Nationality.data in COUNTRY_DATA:
                 form.City.choices = [('', 'Select City')] + [(city, city) for city in COUNTRY_DATA[form.Nationality.data]['cities']]
-            
+
             if form.validate():
-                # Save uploaded document if provided
                 id_document = None
-                if form.IDDocument.data:
-                    filename = secure_filename(form.IDDocument.data.filename)
-                    extension = os.path.splitext(filename)[1]
-                    new_filename = f"{member_dir_name}{extension}"
-                    form.IDDocument.data.save(os.path.join(member_upload_dir, new_filename))
-                    id_document = f"{member_dir_name}/{new_filename}"
-
-                # Add this after handling IDDocument
                 qualification_document = None
-                if form.QualificationDocument.data:
-                    filename = secure_filename(form.QualificationDocument.data.filename)
-                    extension = os.path.splitext(filename)[1]
-                    new_filename = f"{member_dir_name}_qual{extension}"
-                    form.QualificationDocument.data.save(os.path.join(member_upload_dir, new_filename))
-                    qualification_document = f"{member_dir_name}/{new_filename}"
 
-                # Prepare member data for local storage
+                # Handle ID Document upload
+                if form.IDDocument.data:
+                    try:
+                        filename = secure_filename(form.IDDocument.data.filename)
+                        extension = os.path.splitext(filename)[1]
+                        new_filename = f"{member_dir_name}{extension}"
+                        file_path = os.path.join(member_upload_dir, new_filename)
+                        form.IDDocument.data.save(file_path)
+                        id_document = f"{member_dir_name}/{new_filename}"
+                    except Exception as e:
+                        print(f"Error saving ID document: {str(e)}")
+                        return jsonify({
+                            'status': 'error',
+                            'title': 'Error',
+                            'message': f'Could not save ID document: {str(e)}',
+                            'icon': 'error'
+                        }), 500
+
+                # Handle Qualification Document upload
+                if form.QualificationDocument.data:
+                    try:
+                        filename = secure_filename(form.QualificationDocument.data.filename)
+                        extension = os.path.splitext(filename)[1]
+                        new_filename = f"{member_dir_name}_qual{extension}"
+                        file_path = os.path.join(member_upload_dir, new_filename)
+                        form.QualificationDocument.data.save(file_path)
+                        qualification_document = f"{member_dir_name}/{new_filename}"
+                    except Exception as e:
+                        print(f"Error saving qualification document: {str(e)}")
+                        return jsonify({
+                            'status': 'error',
+                            'title': 'Error',
+                            'message': f'Could not save qualification document: {str(e)}',
+                            'icon': 'error'
+                        }), 500
+
+                # Prepare member data
                 member_data = {
                     'FirstName': form.FirstName.data,
                     'MiddleName': form.MiddleName.data,
@@ -341,45 +408,59 @@ def edit_member(id_number):
 
                 if id_document:
                     member_data['IDDocument'] = id_document
-
                 if qualification_document:
                     member_data['QualificationDocument'] = qualification_document
 
                 # Save to members.json
                 try:
-                    with open('members.json', 'r') as f:
-                        members = json.load(f)
-                except (FileNotFoundError, json.JSONDecodeError):
-                    members = {}
-                
-                members[decoded_id] = member_data
-                
-                with open('members.json', 'w') as f:
-                    json.dump(members, f, indent=2)
+                    if os.path.exists(MEMBERS_JSON):
+                        with open(MEMBERS_JSON, 'r') as f:
+                            members = json.load(f)
+                    else:
+                        members = {}
+                        with open(MEMBERS_JSON, 'w') as f:
+                            json.dump({}, f)
 
-                # Prepare data for backoffice (without UpdatedAt)
-                backoffice_data = member_data.copy()
-                del backoffice_data['UpdatedAt']
+                    members[decoded_id] = member_data
 
-                # Save to backoffice
-                if save_to_backoffice(backoffice_data):
+                    with open(MEMBERS_JSON, 'w') as f:
+                        json.dump(members, f, indent=2)
+                        f.flush()
+                        os.fsync(f.fileno())
+
+                    print(f"Successfully saved to members.json: {decoded_id}")
+
+                    # Prepare data for backoffice
+                    backoffice_data = member_data.copy()
+                    del backoffice_data['UpdatedAt']
+
+                    # Save to backoffice
+                    if save_to_backoffice(backoffice_data):
+                        return jsonify({
+                            'status': 'success',
+                            'title': 'Success',
+                            'message': 'Your information has been submitted successfully!',
+                            'icon': 'success',
+                            'redirect': url_for('view_member', id_number=quote(decoded_id))
+                        })
+                    else:
+                        return jsonify({
+                            'status': 'warning',
+                            'title': 'Partial Success',
+                            'message': 'Your information was saved but there was an issue updating the backoffice. Please contact support.',
+                            'icon': 'warning',
+                            'redirect': url_for('view_member', id_number=quote(decoded_id))
+                        })
+
+                except Exception as e:
+                    print(f"Error saving to members.json: {str(e)}")
                     return jsonify({
-                        'status': 'success',
-                        'title': 'Success',
-                        'message': 'Your information has been submitted successfully!',
-                        'icon': 'success',
-                        'redirect': url_for('view_member', id_number=quote(decoded_id))
-                    })
-                else:
-                    return jsonify({
-                        'status': 'warning',
-                        'title': 'Partial Success',
-                        'message': 'Your information was saved but there was an issue updating the backoffice. Please contact support.',
-                        'icon': 'warning',
-                        'redirect': url_for('view_member', id_number=quote(decoded_id))
-                    })
+                        'status': 'error',
+                        'title': 'Error',
+                        'message': f'Could not save member data: {str(e)}',
+                        'icon': 'error'
+                    }), 500
             else:
-                # Form validation failed
                 errors = []
                 for field, field_errors in form.errors.items():
                     errors.extend(field_errors)
@@ -393,22 +474,24 @@ def edit_member(id_number):
         # For GET request, populate form with existing data
         if existing_data:
             for field in form._fields:
-                if field in existing_data and field != 'IDNumber':  # Skip IDNumber as we set it above
+                if field in existing_data and field != 'IDNumber':
                     getattr(form, field).data = existing_data[field]
-            
+
             # Update city choices for existing data
             if existing_data.get('Nationality') in COUNTRY_DATA:
                 form.City.choices = [('', 'Select City')] + [(city, city) for city in COUNTRY_DATA[existing_data['Nationality']]['cities']]
 
         return render_template('edit.html', form=form, existing_data=existing_data)
+
     except Exception as e:
-        print(f"Error in edit_member: {str(e)}")  # Debug print
+        print(f"Error in edit_member: {str(e)}")
         return jsonify({
             'status': 'error',
             'title': 'Error',
             'message': str(e),
             'icon': 'error'
         }), 500
+
 
 @app.route('/update_cities/<nationality>')
 def update_cities(nationality):
@@ -450,24 +533,34 @@ def logout():
 @login_required
 def backoffice():
     filter_type = request.args.get('filter', 'all')
-    
+
     try:
         # Load valid IDs from idnumbers.json
         valid_ids = load_valid_ids()
-        
-        # Load submitted member data from members.json
+
+        # Load submitted member data from members.json using absolute path
         try:
-            with open('members.json', 'r') as f:
-                submitted_members = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
+            if not os.path.exists(MEMBERS_JSON):
+                # Initialize empty members.json if it doesn't exist
+                with open(MEMBERS_JSON, 'w') as f:
+                    json.dump({}, f)
+                submitted_members = {}
+            else:
+                with open(MEMBERS_JSON, 'r') as f:
+                    submitted_members = json.load(f)
+        except Exception as e:
+            print(f"Error loading members.json: {str(e)}")
             submitted_members = {}
-        
+
         # Create a list of all members with their update status
         all_members = []
         for id_number in valid_ids:
             member = submitted_members.get(id_number, {'IDNumber': id_number})
+            # Ensure IDNumber is always present
+            if 'IDNumber' not in member:
+                member['IDNumber'] = id_number
             all_members.append(member)
-        
+
         # Filter members based on selection
         if filter_type == 'updated':
             members = [m for m in all_members if m.get('FirstName')]
@@ -475,61 +568,81 @@ def backoffice():
             members = [m for m in all_members if not m.get('FirstName')]
         else:
             members = all_members
-        
+
         # Get counts
         all_count = len(all_members)
         updated_count = len([m for m in all_members if m.get('FirstName')])
-        not_updated_count = len([m for m in all_members if not m.get('FirstName')])
-        
-        return render_template('backoffice.html', 
+        not_updated_count = all_count - updated_count
+
+        return render_template('backoffice.html',
                             members=members,
                             current_filter=filter_type,
                             all_count=all_count,
                             updated_count=updated_count,
                             not_updated_count=not_updated_count)
-                            
+
     except Exception as e:
         print(f"Error in backoffice: {str(e)}")
         flash('Error loading member data', 'error')
-        return render_template('backoffice.html', 
+        return render_template('backoffice.html',
                             members=[],
                             current_filter='all',
                             all_count=0,
                             updated_count=0,
                             not_updated_count=0)
 
+
 @app.route('/view_member_details/<path:id_number>')
 @login_required
 def view_member_details(id_number):
     try:
-        # Load member data
-        with open('members.json', 'r') as f:
+        if not os.path.exists(MEMBERS_JSON):
+            flash('Member information not found.', 'error')
+            return redirect(url_for('backoffice'))
+
+        with open(MEMBERS_JSON, 'r') as f:
             members = json.load(f)
             if id_number in members:
                 member = members[id_number]
+                # Add file existence checks
+                if 'IDDocument' in member:
+                    id_doc_path = os.path.join(UPLOAD_FOLDER, member['IDDocument'])
+                    member['IDDocumentExists'] = os.path.exists(id_doc_path)
+                if 'QualificationDocument' in member:
+                    qual_doc_path = os.path.join(UPLOAD_FOLDER, member['QualificationDocument'])
+                    member['QualificationDocumentExists'] = os.path.exists(qual_doc_path)
                 return render_template('view_member.html', member=member)
             else:
                 flash('Member has not submitted their information yet.', 'warning')
                 return redirect(url_for('backoffice'))
     except Exception as e:
+        print(f"Error loading member details: {str(e)}")
         flash('Error loading member details', 'error')
         return redirect(url_for('backoffice'))
+
 
 @app.route('/view_document/<path:id_number>')
 @login_required
 def view_document(id_number):
     try:
-        with open('members.json', 'r') as f:
+        if not os.path.exists(MEMBERS_JSON):
+            flash('Document not found', 'error')
+            return redirect(url_for('backoffice'))
+
+        with open(MEMBERS_JSON, 'r') as f:
             members = json.load(f)
             if id_number in members and members[id_number].get('IDDocument'):
                 filename = members[id_number]['IDDocument']
-                return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-            else:
-                flash('Document not found', 'error')
-                return redirect(url_for('backoffice'))
+                file_path = os.path.join(UPLOAD_FOLDER, filename)
+                if os.path.exists(file_path):
+                    return send_from_directory(UPLOAD_FOLDER, filename)
+            flash('Document not found', 'error')
+            return redirect(url_for('backoffice'))
     except Exception as e:
+        print(f"Error accessing document: {str(e)}")
         flash('Error accessing document', 'error')
         return redirect(url_for('backoffice'))
+
 
 @app.route('/static/uploads/<path:filename>')
 def uploaded_file(filename):
@@ -546,7 +659,7 @@ def export_csv():
         
         # Load submitted member data from members.json
         try:
-            with open('members.json', 'r') as f:
+            with open(MEMBERS_JSON, 'r') as f:
                 members = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
             members = {}

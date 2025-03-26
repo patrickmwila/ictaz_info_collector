@@ -212,23 +212,15 @@
                                                     <option value="K142.00">K142.00</option>
                                                 </optgroup>
                                                 <optgroup label="Associate">
-                                                    <option value="K200.00">K200.00</option>
                                                     <option value="K150.00">K150.00</option>
                                                     <option value="K100.00">K100.00</option>
                                                 </optgroup>
                                                 <optgroup label="Licentiate">
-                                                    <option value="K154.00">K154.00</option>
                                                     <option value="K113.00">K113.00</option>
-                                                    <option value="K75.00">K75.00</option>
                                                 </optgroup>
                                                 <optgroup label="Affiliate">
-                                                    <option value="K128.00">K128.00</option>
                                                     <option value="K95.00">K95.00</option>
                                                     <option value="K64.00">K64.00</option>
-                                                </optgroup>
-                                                <optgroup label="Student">
-                                                    <option value="K25.00">K25.00</option>
-                                                    <option value="K17.00">K17.00</option>
                                                 </optgroup>
                                             </select>
                                             {% if form.MonthlyDeduction.errors %}
@@ -479,7 +471,7 @@ document.getElementById('memberForm').addEventListener('submit', async function(
     }
     
     // Show loading state
-    // showLoading('Submitting your information...');
+    showLoading('Submitting your information...');
     
     try {
         // Get the form data including files
@@ -498,7 +490,7 @@ document.getElementById('memberForm').addEventListener('submit', async function(
             throw new Error('Invalid server response');
         }
         
-        // hideLoading();
+        hideLoading();
         
         if (response.ok) {
             // Show success message and redirect
@@ -553,12 +545,12 @@ document.getElementById('nationality').addEventListener('change', async function
         return;
     }
     
-    // showLoading('Loading cities...');
+    showLoading('Loading cities...');
     
     try {
         const response = await fetch(`/api/update_cities/${nationality}`);
         const data = await response.json();
-        // hideLoading();
+        hideLoading();
         
         if (response.ok) {
             citySelect.innerHTML = data.map(city => 
