@@ -85,6 +85,7 @@ class Member(db.Model):
     MonthlyDeduction = db.Column(db.Float)
     HighestQualification = db.Column(db.String(100))
     QualificationDocument = db.Column(db.String(255))  # Store the file path
+    isProcessed = db.Column(db.Boolean, default=False)  # Track processing status
 
 def init_db():
     with app.app_context():
@@ -150,7 +151,7 @@ def save_to_backoffice(member_data):
             'IDNumber', 'FirstName', 'MiddleName', 'LastName', 'Gender',
             'Email', 'DateofBirth', 'MobileNo', 'IDType', 'Nationality',
             'MembershipCategory', 'Address', 'City', 'MonthlyDeduction',
-            'IDDocument', 'HighestQualification', 'QualificationDocument', 'SubmissionDate'
+            'IDDocument', 'HighestQualification', 'QualificationDocument', 'SubmissionDate', 'isProcessed'
         ]
 
         # Add submission date to member data
@@ -672,7 +673,7 @@ def export_csv():
         writer.writerow(['ID Number', 'First Name', 'Middle Name', 'Last Name', 'Gender', 
                         'Email', 'Date of Birth', 'Mobile No', 'ID Type', 'Nationality',
                         'Membership Category', 'Address', 'City', 'Monthly Deduction',
-                        'ID Document', 'Status'])
+                        'ID Document', 'Status', 'Processed'])
         
         # Write member data for all valid IDs
         for id_number in valid_ids:
@@ -693,7 +694,8 @@ def export_csv():
                 data.get('City', ''),
                 data.get('MonthlyDeduction', ''),
                 data.get('IDDocument', ''),
-                'Updated' if data.get('FirstName') else 'Not Updated'
+                'Updated' if data.get('FirstName') else 'Not Updated',
+                'Yes' if Member.query.filter_by(IDNumber=id_number).first() and Member.query.filter_by(IDNumber=id_number).first().isProcessed else 'No'
             ])
         
         # Prepare response
@@ -725,6 +727,30 @@ def get_country_code(country):
 # Make sure init_db() is called when the app starts
 with app.app_context():
     init_db()
+
+@app.route('/update_processed_status', methods=['POST'])
+@login_required
+def update_processed_status():
+    try:
+        data = request.get_json()
+        id_number = data.get('id_number')
+        is_processed = data.get('is_processed')
+        
+        if not id_number:
+            return jsonify({'status': 'error', 'message': 'ID number is required'}), 400
+        
+        member = Member.query.filter_by(IDNumber=id_number).first()
+        if not member:
+            member = Member(IDNumber=id_number)
+            db.session.add(member)
+        
+        member.isProcessed = is_processed
+        db.session.commit()
+        return jsonify({'status': 'success'})
+    except Exception as e:
+        db.session.rollback()
+        print(f'Error updating processed status: {str(e)}')
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
